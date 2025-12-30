@@ -16,42 +16,33 @@ export default defineConfig({
     },
     build: {
         outDir: 'dist',
-        sourcemap: true,
+        sourcemap: false, // Disable sourcemaps for production
+        chunkSizeWarningLimit: 600,
         rollupOptions: {
             output: {
-                manualChunks(id) {
-                    if (id.includes('node_modules')) {
-                        // React core
-                        if (id.includes('react-dom') || id.includes('/react/')) {
-                            return 'vendor-react';
-                        }
-                        // React Router
-                        if (id.includes('react-router')) {
-                            return 'vendor-router';
-                        }
-                        // Radix UI
-                        if (id.includes('@radix-ui')) {
-                            return 'vendor-radix';
-                        }
-                        // TanStack Query
-                        if (id.includes('@tanstack')) {
-                            return 'vendor-query';
-                        }
-                        // Supabase
-                        if (id.includes('@supabase')) {
-                            return 'vendor-supabase';
-                        }
-                        // Charts
-                        if (id.includes('recharts') || id.includes('d3-')) {
-                            return 'vendor-charts';
-                        }
-                        // Icons
-                        if (id.includes('lucide-react')) {
-                            return 'vendor-icons';
-                        }
-                    }
+                manualChunks: {
+                    // Group all React-related packages together
+                    'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+                    // UI Libraries
+                    'vendor-ui': [
+                        '@radix-ui/react-accordion',
+                        '@radix-ui/react-alert-dialog',
+                        '@radix-ui/react-avatar',
+                        '@radix-ui/react-checkbox',
+                        '@radix-ui/react-dialog',
+                        '@radix-ui/react-dropdown-menu',
+                        '@radix-ui/react-progress',
+                        '@radix-ui/react-select',
+                        '@radix-ui/react-slot',
+                        '@radix-ui/react-switch',
+                        '@radix-ui/react-tabs',
+                        '@radix-ui/react-tooltip',
+                    ],
+                    // Data fetching
+                    'vendor-data': ['@tanstack/react-query', '@supabase/supabase-js'],
                 },
             },
         },
     },
 });
+
