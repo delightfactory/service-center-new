@@ -37,6 +37,8 @@ interface PaymentModalProps {
         paid_amount: number;
         remaining_amount: number;
         customer_name?: string;
+        supplier_name?: string;
+        invoice_type?: 'sales' | 'purchase' | 'sales_return' | 'purchase_return';
     } | null;
 }
 
@@ -127,14 +129,18 @@ export function PaymentModal({ open, onOpenChange, invoice }: PaymentModalProps)
                 .eq('id', user?.id)
                 .single();
 
-            // Fetch the invoice to get customer_id and branch_id
+            // Fetch the invoice to get customer_id, supplier_id, branch_id, and invoice_type
             const { data: invoiceData, error: invoiceFetchError } = await supabase
                 .from('invoices')
-                .select('customer_id, branch_id')
+                .select('customer_id, supplier_id, branch_id, invoice_type')
                 .eq('id', invoice.id)
                 .single();
 
             if (invoiceFetchError) throw invoiceFetchError;
+
+            // Determine payment_type based on invoice_type
+            const isPurchaseInvoice = invoiceData?.invoice_type === 'purchase' || invoiceData?.invoice_type === 'purchase_return';
+            const paymentTypeValue = isPurchaseInvoice ? 'supplier_payment' : 'customer_receipt';
 
             // Get branch_id from profile or invoice
             const branchId = profile?.branch_id || invoiceData?.branch_id;
@@ -144,12 +150,13 @@ export function PaymentModal({ open, onOpenChange, invoice }: PaymentModalProps)
 
             // Create payment record - trigger will create treasury_transaction automatically
             const paymentData = {
-                payment_type: 'customer_receipt',
+                payment_type: paymentTypeValue,
                 payment_method: paymentMethod === 'e_wallet' ? 'online' :
                     paymentMethod === 'check' ? 'cheque' : paymentMethod,
                 treasury_id: treasuryId,
                 invoice_id: invoice.id,
-                customer_id: invoiceData?.customer_id || null,
+                customer_id: isPurchaseInvoice ? null : (invoiceData?.customer_id || null),
+                supplier_id: isPurchaseInvoice ? (invoiceData?.supplier_id || null) : null,
                 amount: paymentAmount,
                 payment_date: new Date().toISOString().split('T')[0],
                 reference: reference || null,

@@ -52,6 +52,7 @@ interface VehicleAssessment {
         year: number | null;
         color: string | null;
     } | null;
+    job_order?: { id: string } | null;
     job_orders_count?: number;
 }
 
@@ -104,7 +105,8 @@ export function WorkshopPage() {
           id, code, entry_type, status, customer_complaint,
           fuel_level, mileage_in, created_at,
           customer:customers (id, name, phone),
-          vehicle:vehicles (id, plate_number, make, model, year, color)
+          vehicle:vehicles (id, plate_number, make, model, year, color),
+          job_order:job_orders (id)
         `)
                 .order('created_at', { ascending: false })
                 .limit(50);
@@ -125,6 +127,7 @@ export function WorkshopPage() {
                 ...a,
                 customer: Array.isArray(a.customer) ? a.customer[0] : a.customer,
                 vehicle: Array.isArray(a.vehicle) ? a.vehicle[0] : a.vehicle,
+                job_order: Array.isArray(a.job_order) ? a.job_order[0] : a.job_order,
             })) as VehicleAssessment[];
         },
     });
@@ -281,7 +284,14 @@ export function WorkshopPage() {
                             <Card
                                 key={assessment.id}
                                 className="cursor-pointer hover:shadow-lg transition-all group border-2 hover:border-primary/50"
-                                onClick={() => navigate(`/dashboard/reception/${assessment.id}`)}
+                                onClick={() => {
+                                    // إذا كان هناك أمر شغل، التوجه إليه. وإلا للاستقبال
+                                    if (assessment.job_order?.id) {
+                                        navigate(`/dashboard/workshop/${assessment.job_order.id}`);
+                                    } else {
+                                        navigate(`/dashboard/reception/${assessment.id}`);
+                                    }
+                                }}
                             >
                                 <CardContent className="p-0">
                                     {/* Status Header */}

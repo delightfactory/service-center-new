@@ -142,6 +142,8 @@ export function CreateInvoicePage() {
         queryFn: async () => {
             if (!jobOrderId) return [];
 
+            console.log('Fetching job items for jobOrderId:', jobOrderId);
+
             const { data, error } = await supabase
                 .from('job_items')
                 .select(`
@@ -149,23 +151,28 @@ export function CreateInvoicePage() {
                     product:products (id, name, code)
                 `)
                 .eq('job_order_id', jobOrderId);
+
+            console.log('Job items fetched:', data, 'Error:', error);
+
             if (error) throw error;
 
             // Convert to invoice items
             const invoiceItems: InvoiceItem[] = (data || []).map(item => {
                 const product = Array.isArray(item.product) ? item.product[0] : item.product;
-                const discountAmount = (item.quantity * item.unit_price * (item.discount_percent / 100));
+                const discountPercent = item.discount_percent || 0; // Fix null
+                const discountAmount = (item.quantity * item.unit_price * (discountPercent / 100));
                 return {
                     id: crypto.randomUUID(),
                     job_item_id: item.id,
-                    description: product?.name || item.description,
-                    quantity: item.quantity,
-                    unit_price: item.unit_price,
+                    description: product?.name || item.description || 'بند',
+                    quantity: item.quantity || 1,
+                    unit_price: item.unit_price || 0,
                     discount: discountAmount,
-                    total: item.total_price,
+                    total: item.total_price || 0,
                 };
             });
 
+            console.log('Converted invoice items:', invoiceItems);
             setItems(invoiceItems);
             return (data || []).map(item => ({
                 ...item,

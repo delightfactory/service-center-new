@@ -177,7 +177,7 @@ export function PurchasesPage() {
     useRealtime({
         table: 'invoices',
         filter: "invoice_type=eq.purchase",
-        queryKey: ['purchase-invoices', statusFilter],
+        queryKey: ['purchase-invoices'],
     });
 
     // Calculate stats

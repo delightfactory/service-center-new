@@ -156,14 +156,14 @@ export function InvoicesPage() {
         },
     });
 
-    // Real-time updates
+    // Real-time updates - use base queryKey for broader invalidation
     useRealtime({
         table: 'invoices',
-        queryKey: ['invoices', searchQuery, typeFilter, statusFilter],
+        queryKey: ['invoices'],
     });
     useRealtime({
         table: 'payments',
-        queryKey: ['invoices', searchQuery, typeFilter, statusFilter],
+        queryKey: ['invoices'],
     });
 
     // Calculate stats

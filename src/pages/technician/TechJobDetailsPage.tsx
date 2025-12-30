@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 import type { PriorityLevel } from '@/types/enums';
 
 // ============================================================
-// Technician Job Details Page - Complete Redesign
+// Technician Job Details Page - Enhanced UX
 // ============================================================
 
 interface JobTask {
@@ -52,6 +52,26 @@ const BLOCK_REASONS = [
     'أخرى (يرجى التحديد)',
 ];
 
+// Haptic feedback helper
+const triggerHaptic = (type: 'light' | 'medium' | 'success' | 'error') => {
+    if ('vibrate' in navigator) {
+        switch (type) {
+            case 'light':
+                navigator.vibrate(10);
+                break;
+            case 'medium':
+                navigator.vibrate(30);
+                break;
+            case 'success':
+                navigator.vibrate([50, 30, 50]);
+                break;
+            case 'error':
+                navigator.vibrate([100, 50, 100]);
+                break;
+        }
+    }
+};
+
 // Live Timer Component with total time support
 function LiveTimer({ startTime, previousSeconds = 0, size = 'lg' }: { startTime: string; previousSeconds?: number; size?: 'sm' | 'lg' | 'xl' }) {
     const [elapsed, setElapsed] = React.useState(0);
@@ -70,8 +90,8 @@ function LiveTimer({ startTime, previousSeconds = 0, size = 'lg' }: { startTime:
     const seconds = totalSeconds % 60;
 
     const sizes = {
-        sm: 'text-lg',
-        lg: 'text-3xl',
+        sm: 'text-xl',
+        lg: 'text-4xl',
         xl: 'text-5xl',
     };
 
@@ -89,8 +109,8 @@ function StaticTimer({ seconds, size = 'lg' }: { seconds: number; size?: 'sm' | 
     const secs = seconds % 60;
 
     const sizes = {
-        sm: 'text-lg',
-        lg: 'text-3xl',
+        sm: 'text-xl',
+        lg: 'text-4xl',
         xl: 'text-5xl',
     };
 
@@ -108,10 +128,17 @@ export function TechJobDetailsPage() {
     const { profile } = useAuth();
 
     // Block reason modal state
-    const [showBlockModal, setShowBlockModal] = React.useState(false);
-    const [blockingTask, setBlockingTask] = React.useState<JobTask | null>(null);
-    const [selectedReason, setSelectedReason] = React.useState<string>('');
-    const [customReason, setCustomReason] = React.useState('');
+    const [showBlockModal, setShowBlockModal] = useState(false);
+    const [blockingTask, setBlockingTask] = useState<JobTask | null>(null);
+    const [selectedReason, setSelectedReason] = useState<string>('');
+    const [customReason, setCustomReason] = useState('');
+
+    // Smart Auto-Clock modal
+    const [showAutoClockPrompt, setShowAutoClockPrompt] = useState(false);
+    const [hasShownAutoClockPrompt, setHasShownAutoClockPrompt] = useState(false);
+
+    // Long press state for tasks
+    const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
 
     // ============================================================
     // Real-time Subscriptions
@@ -175,7 +202,7 @@ export function TechJobDetailsPage() {
             };
         },
         enabled: !!id,
-        refetchInterval: 5000, // Polling fallback
+        refetchInterval: 5000,
     });
 
     // Fetch tasks
@@ -192,7 +219,7 @@ export function TechJobDetailsPage() {
             return data as JobTask[];
         },
         enabled: !!id,
-        refetchInterval: 5000, // Polling fallback
+        refetchInterval: 5000,
     });
 
     // Fetch active time log
@@ -211,7 +238,7 @@ export function TechJobDetailsPage() {
             return data as TimeLog | null;
         },
         enabled: !!id && !!profile?.id,
-        refetchInterval: 5000, // Polling fallback
+        refetchInterval: 5000,
     });
 
     // Fetch total previous time
@@ -238,7 +265,19 @@ export function TechJobDetailsPage() {
         enabled: !!id && !!profile?.id,
     });
 
-    // Toggle task completion
+    // Smart Auto-Clock: Show prompt if not clocked in
+    useEffect(() => {
+        if (!isLoading && job && !activeTimeLog && !hasShownAutoClockPrompt && job.status !== 'review') {
+            // Delay to allow the page to render first
+            const timer = setTimeout(() => {
+                setShowAutoClockPrompt(true);
+                setHasShownAutoClockPrompt(true);
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [isLoading, job, activeTimeLog, hasShownAutoClockPrompt]);
+
+    // Toggle task completion with haptic
     const toggleTaskMutation = useMutation({
         mutationFn: async ({ taskId, isCompleted }: { taskId: string; isCompleted: boolean }) => {
             const { error } = await supabase
@@ -253,11 +292,15 @@ export function TechJobDetailsPage() {
                 .eq('id', taskId);
             if (error) throw error;
         },
-        onSuccess: () => {
+        onSuccess: (_, { isCompleted }) => {
             queryClient.invalidateQueries({ queryKey: ['tech-job-tasks', id] });
+            if (isCompleted) {
+                triggerHaptic('success');
+            }
         },
         onError: (error) => {
             console.error('Task update failed:', error);
+            triggerHaptic('error');
             alert('فشل تحديث المهمة. يرجى المحاولة مرة أخرى.');
         },
     });
@@ -278,6 +321,7 @@ export function TechJobDetailsPage() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['tech-job-tasks', id] });
+            triggerHaptic('medium');
             setShowBlockModal(false);
             setBlockingTask(null);
             setSelectedReason('');
@@ -321,9 +365,12 @@ export function TechJobDetailsPage() {
             queryClient.invalidateQueries({ queryKey: ['tech-total-time', id, profile?.id] });
             queryClient.invalidateQueries({ queryKey: ['tech-jobs', profile?.id] });
             queryClient.invalidateQueries({ queryKey: ['tech-job-details', id] });
+            triggerHaptic('medium');
+            setShowAutoClockPrompt(false);
         },
         onError: (error) => {
             console.error('Clock mutation failed:', error);
+            triggerHaptic('error');
             alert('فشل تسجيل الوقت. يرجى المحاولة مرة أخرى.');
         },
     });
@@ -354,17 +401,39 @@ export function TechJobDetailsPage() {
             queryClient.invalidateQueries({ queryKey: ['tech-job-details', id] });
             queryClient.invalidateQueries({ queryKey: ['tech-jobs', profile?.id] });
             queryClient.invalidateQueries({ queryKey: ['tech-active-timelog', id, profile?.id] });
+            triggerHaptic('success');
             alert('تم إرسال طلب المراجعة بنجاح! سيتم إشعار المشرف.');
         },
         onError: (error) => {
             console.error('Request review failed:', error);
+            triggerHaptic('error');
             alert('فشل إرسال طلب المراجعة.');
         },
     });
 
-    const handleBlockTask = (task: JobTask) => {
-        setBlockingTask(task);
-        setShowBlockModal(true);
+    // Quick task completion (single tap)
+    const handleQuickComplete = (task: JobTask) => {
+        if (task.is_completed || task.is_blocked) return;
+        triggerHaptic('light');
+        toggleTaskMutation.mutate({ taskId: task.id, isCompleted: true });
+    };
+
+    // Long press handlers for block
+    const handleTouchStart = (task: JobTask) => {
+        if (task.is_completed || task.is_blocked) return;
+        const timer = setTimeout(() => {
+            triggerHaptic('medium');
+            setBlockingTask(task);
+            setShowBlockModal(true);
+        }, 600);
+        setLongPressTimer(timer);
+    };
+
+    const handleTouchEnd = () => {
+        if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            setLongPressTimer(null);
+        }
     };
 
     const handleSubmitBlock = () => {
@@ -398,6 +467,10 @@ export function TechJobDetailsPage() {
     const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
     const allTasksCompleted = totalCount > 0 && completedCount === totalCount;
     const isInReview = job.status === 'review';
+    const isCompleted = job.status === 'completed';
+    const isDelivered = job.status === 'delivered';
+    const isFinished = isInReview || isCompleted || isDelivered;
+
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 pb-8">
@@ -408,9 +481,9 @@ export function TechJobDetailsPage() {
                 </Button>
                 <div className="flex-1 min-w-0">
                     <p className="font-bold text-lg truncate">{job.vehicle?.make} {job.vehicle?.model}</p>
-                    <p className="text-xs text-muted-foreground font-mono">{job.vehicle?.plate_number}</p>
+                    <p className="text-sm text-muted-foreground font-mono">{job.vehicle?.plate_number}</p>
                 </div>
-                <Badge variant="secondary" className="shrink-0">{job.code}</Badge>
+                <Badge variant="secondary" className="shrink-0 text-sm">{job.code}</Badge>
             </div>
 
             <div className="p-4 space-y-4">
@@ -422,7 +495,7 @@ export function TechJobDetailsPage() {
                         : 'bg-card border'
                 )}>
                     <p className={cn(
-                        'text-sm mb-3 font-medium',
+                        'text-base mb-3 font-medium',
                         activeTimeLog ? 'text-primary-foreground/80' : 'text-muted-foreground'
                     )}>
                         ⏱️ الوقت المستغرق
@@ -434,7 +507,7 @@ export function TechJobDetailsPage() {
                         <StaticTimer seconds={totalPreviousSeconds || 0} size="xl" />
                     )}
 
-                    {!isInReview && (
+                    {!isFinished && (
                         <Button
                             size="lg"
                             className={cn(
@@ -462,15 +535,15 @@ export function TechJobDetailsPage() {
                 </div>
 
                 {/* All Tasks Completed + Request Review */}
-                {allTasksCompleted && !isInReview && (
+                {allTasksCompleted && !isFinished && (
                     <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-2xl border border-green-200 dark:border-green-800 p-6 text-center">
                         <div className="w-16 h-16 mx-auto mb-4 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center">
                             <PartyPopper size={32} className="text-green-600" />
                         </div>
-                        <h3 className="text-lg font-bold text-green-800 dark:text-green-300 mb-2">
+                        <h3 className="text-xl font-bold text-green-800 dark:text-green-300 mb-2">
                             🎉 أحسنت! تم إكمال جميع المهام
                         </h3>
-                        <p className="text-sm text-green-700 dark:text-green-400 mb-4">
+                        <p className="text-base text-green-700 dark:text-green-400 mb-4">
                             يمكنك الآن إرسال الأمر للمراجعة
                         </p>
                         <Button
@@ -491,10 +564,10 @@ export function TechJobDetailsPage() {
                         <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center">
                             <Clock size={32} className="text-blue-600" />
                         </div>
-                        <h3 className="text-lg font-bold text-blue-800 dark:text-blue-300 mb-2">
+                        <h3 className="text-xl font-bold text-blue-800 dark:text-blue-300 mb-2">
                             في انتظار المراجعة
                         </h3>
-                        <p className="text-sm text-blue-700 dark:text-blue-400">
+                        <p className="text-base text-blue-700 dark:text-blue-400">
                             تم إرسال الأمر للمشرف للمراجعة والاعتماد
                         </p>
                     </div>
@@ -503,40 +576,40 @@ export function TechJobDetailsPage() {
                 {/* Customer Info */}
                 <div className="bg-card rounded-2xl border p-4">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-muted to-muted/50 rounded-xl flex items-center justify-center">
-                            <User size={24} />
+                        <div className="w-14 h-14 bg-gradient-to-br from-muted to-muted/50 rounded-xl flex items-center justify-center">
+                            <User size={28} />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-lg">{job.customer?.name}</p>
-                            <p className="text-sm text-muted-foreground">{job.customer?.phone}</p>
+                            <p className="font-semibold text-xl">{job.customer?.name}</p>
+                            <p className="text-base text-muted-foreground">{job.customer?.phone}</p>
                         </div>
                         {job.customer?.phone && (
                             <Button
                                 variant="outline"
                                 size="icon"
-                                className="shrink-0 rounded-xl h-12 w-12"
+                                className="shrink-0 rounded-xl h-14 w-14"
                                 asChild
                             >
                                 <a href={`tel:${job.customer.phone}`}>
-                                    <Phone size={20} />
+                                    <Phone size={24} />
                                 </a>
                             </Button>
                         )}
                     </div>
                 </div>
 
-                {/* Manager Instructions */}
+                {/* Manager Instructions - Enhanced visibility */}
                 {job.manager_instructions && (
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-2xl border border-amber-200/50 dark:border-amber-800/50 p-4">
-                        <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/50 rounded-xl flex items-center justify-center shrink-0">
-                                <FileText size={20} className="text-amber-600" />
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-2xl border-2 border-amber-300 dark:border-amber-700 p-5">
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-amber-200 dark:bg-amber-900/50 rounded-xl flex items-center justify-center shrink-0">
+                                <FileText size={24} className="text-amber-700 dark:text-amber-400" />
                             </div>
-                            <div>
-                                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
-                                    توجيهات المشرف
+                            <div className="flex-1">
+                                <p className="text-base font-bold text-amber-800 dark:text-amber-300 mb-2">
+                                    📋 توجيهات المشرف
                                 </p>
-                                <p className="text-sm text-amber-700 dark:text-amber-400 leading-relaxed">
+                                <p className="text-lg text-amber-900 dark:text-amber-200 leading-relaxed font-medium">
                                     {job.manager_instructions}
                                 </p>
                             </div>
@@ -544,15 +617,15 @@ export function TechJobDetailsPage() {
                     </div>
                 )}
 
-                {/* Tasks */}
+                {/* Tasks - Enhanced with quick complete */}
                 <div className="bg-card rounded-2xl border overflow-hidden">
                     <div className="p-4 border-b flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <h2 className="font-bold text-lg">📋 المهام</h2>
-                            <Badge variant="secondary">{completedCount}/{totalCount}</Badge>
+                        <div className="flex items-center gap-3">
+                            <h2 className="font-bold text-xl">📋 المهام</h2>
+                            <Badge variant="secondary" className="text-base px-3 py-1">{completedCount}/{totalCount}</Badge>
                         </div>
-                        <div className="w-24">
-                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="w-28">
+                            <div className="h-3 bg-muted rounded-full overflow-hidden">
                                 <div
                                     className={cn(
                                         'h-full rounded-full transition-all duration-500',
@@ -566,96 +639,89 @@ export function TechJobDetailsPage() {
                         </div>
                     </div>
 
+                    {/* Quick Complete Hint */}
+                    {!isInReview && tasks && tasks.some(t => !t.is_completed && !t.is_blocked) && (
+                        <div className="px-4 py-2 bg-muted/50 text-sm text-muted-foreground text-center border-b">
+                            💡 انقر على المهمة للإتمام • اضغط مطولاً للإبلاغ عن تعثر
+                        </div>
+                    )}
+
                     {!tasks || tasks.length === 0 ? (
                         <div className="p-8 text-center text-muted-foreground">
                             <CheckCircle2 size={48} className="mx-auto mb-3 opacity-50" />
-                            <p>لا توجد مهام محددة</p>
+                            <p className="text-lg">لا توجد مهام محددة</p>
                         </div>
                     ) : (
                         <div className="divide-y">
                             {tasks.map((task) => (
                                 <div
                                     key={task.id}
+                                    onClick={() => !isInReview && handleQuickComplete(task)}
+                                    onTouchStart={() => !isInReview && handleTouchStart(task)}
+                                    onTouchEnd={handleTouchEnd}
+                                    onMouseDown={() => !isInReview && handleTouchStart(task)}
+                                    onMouseUp={handleTouchEnd}
+                                    onMouseLeave={handleTouchEnd}
                                     className={cn(
-                                        'p-4 transition-colors',
+                                        'p-5 transition-all select-none',
                                         task.is_completed && 'bg-green-50/50 dark:bg-green-950/20',
-                                        task.is_blocked && 'bg-red-50/50 dark:bg-red-950/20'
+                                        task.is_blocked && 'bg-red-50/50 dark:bg-red-950/20',
+                                        !task.is_completed && !task.is_blocked && !isInReview && 'cursor-pointer active:bg-muted/50 hover:bg-muted/30'
                                     )}
                                 >
-                                    <div className="flex items-start gap-3 mb-3">
-                                        {/* Status Icon */}
+                                    <div className="flex items-start gap-4">
+                                        {/* Status Icon - Larger */}
                                         <div className={cn(
-                                            'w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5',
+                                            'w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 transition-transform',
                                             task.is_completed
-                                                ? 'bg-green-500 text-white'
+                                                ? 'bg-green-500 text-white scale-110'
                                                 : task.is_blocked
                                                     ? 'bg-red-500 text-white'
-                                                    : 'bg-muted border-2 border-muted-foreground/20'
+                                                    : 'bg-muted border-2 border-muted-foreground/30'
                                         )}>
-                                            {task.is_completed && <CheckCircle2 size={18} />}
-                                            {task.is_blocked && <XCircle size={18} />}
+                                            {task.is_completed && <CheckCircle2 size={22} />}
+                                            {task.is_blocked && <XCircle size={22} />}
                                         </div>
 
                                         <div className="flex-1 min-w-0">
                                             <p className={cn(
-                                                'font-medium text-base',
+                                                'font-semibold text-lg leading-relaxed',
                                                 task.is_completed && 'line-through text-muted-foreground'
                                             )}>
                                                 {task.description}
                                             </p>
 
-                                            {/* Always show notes (task details) */}
+                                            {/* Task notes - More visible */}
                                             {task.notes && (
-                                                <p className="text-sm text-muted-foreground mt-1 bg-muted/50 p-2 rounded-lg">
+                                                <p className="text-base text-muted-foreground mt-2 bg-muted/70 p-3 rounded-xl leading-relaxed">
                                                     💡 {task.notes}
                                                 </p>
                                             )}
 
                                             {/* Show blocked reason */}
                                             {task.is_blocked && task.blocked_reason && (
-                                                <div className="flex items-center gap-1.5 mt-2 text-red-600 dark:text-red-400 text-sm">
-                                                    <AlertTriangle size={14} />
+                                                <div className="flex items-center gap-2 mt-3 text-red-600 dark:text-red-400 text-base font-medium">
+                                                    <AlertTriangle size={18} />
                                                     <span>{task.blocked_reason}</span>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Action Buttons */}
-                                    {!task.is_completed && !task.is_blocked && !isInReview && (
-                                        <div className="flex gap-2 mt-3 mr-11">
-                                            <Button
-                                                size="sm"
-                                                className="flex-1 h-10 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg shadow-green-500/20"
-                                                onClick={() => toggleTaskMutation.mutate({ taskId: task.id, isCompleted: true })}
-                                                disabled={toggleTaskMutation.isPending}
-                                            >
-                                                <CheckCircle2 size={16} className="ml-1" />
-                                                إتمام المهمة
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="flex-1 h-10 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-800 dark:hover:bg-red-950"
-                                                onClick={() => handleBlockTask(task)}
-                                            >
-                                                <AlertTriangle size={16} className="ml-1" />
-                                                إبلاغ تعثر
-                                            </Button>
-                                        </div>
-                                    )}
-
-                                    {/* Undo buttons */}
-                                    {(task.is_completed || task.is_blocked) && !isInReview && (
-                                        <div className="mt-3 mr-11">
+                                    {/* Undo button for completed/blocked */}
+                                    {(task.is_completed || task.is_blocked) && !isFinished && (
+                                        <div className="mt-3 mr-14">
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
                                                 className="text-muted-foreground"
-                                                onClick={() => toggleTaskMutation.mutate({ taskId: task.id, isCompleted: false })}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleTaskMutation.mutate({ taskId: task.id, isCompleted: false });
+                                                }}
                                                 disabled={toggleTaskMutation.isPending}
                                             >
-                                                تراجع
+                                                ↩️ تراجع
                                             </Button>
                                         </div>
                                     )}
@@ -666,12 +732,43 @@ export function TechJobDetailsPage() {
                 </div>
             </div>
 
+            {/* Smart Auto-Clock Prompt */}
+            <Dialog open={showAutoClockPrompt} onOpenChange={setShowAutoClockPrompt}>
+                <DialogContent className="sm:max-w-md" dir="rtl">
+                    <DialogHeader>
+                        <DialogTitle className="text-right text-xl">⏱️ بدء العمل؟</DialogTitle>
+                        <DialogDescription className="text-right text-base">
+                            هل تريد تسجيل بدء العمل على هذا الأمر الآن؟
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="flex-row-reverse gap-2 mt-4">
+                        <Button
+                            size="lg"
+                            onClick={() => clockMutation.mutate()}
+                            disabled={clockMutation.isPending}
+                            className="flex-1 h-12 text-lg bg-gradient-to-r from-primary to-primary/90"
+                        >
+                            <PlayCircle size={20} className="ml-2" />
+                            نعم، ابدأ الآن
+                        </Button>
+                        <Button
+                            size="lg"
+                            variant="outline"
+                            onClick={() => setShowAutoClockPrompt(false)}
+                            className="flex-1 h-12 text-lg"
+                        >
+                            لاحقاً
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* Block Reason Modal */}
             <Dialog open={showBlockModal} onOpenChange={setShowBlockModal}>
                 <DialogContent className="sm:max-w-md" dir="rtl">
                     <DialogHeader>
-                        <DialogTitle className="text-right">إبلاغ عن تعثر</DialogTitle>
-                        <DialogDescription className="text-right">
+                        <DialogTitle className="text-right text-xl">⚠️ إبلاغ عن تعثر</DialogTitle>
+                        <DialogDescription className="text-right text-base">
                             اختر سبب التعثر أو اكتب سبباً مخصصاً
                         </DialogDescription>
                     </DialogHeader>
@@ -682,9 +779,9 @@ export function TechJobDetailsPage() {
                                 key={reason}
                                 onClick={() => setSelectedReason(reason)}
                                 className={cn(
-                                    'w-full p-3 text-right rounded-xl border transition-all',
+                                    'w-full p-4 text-right rounded-xl border transition-all text-base',
                                     selectedReason === reason
-                                        ? 'border-primary bg-primary/5 text-primary'
+                                        ? 'border-primary bg-primary/5 text-primary font-medium'
                                         : 'border-muted hover:border-muted-foreground/30'
                                 )}
                             >
@@ -697,7 +794,7 @@ export function TechJobDetailsPage() {
                                 placeholder="اكتب سبب التعثر..."
                                 value={customReason}
                                 onChange={(e) => setCustomReason(e.target.value)}
-                                className="mt-3"
+                                className="mt-3 text-base"
                                 rows={3}
                             />
                         )}
@@ -705,13 +802,14 @@ export function TechJobDetailsPage() {
 
                     <DialogFooter className="flex-row-reverse gap-2">
                         <Button
+                            size="lg"
                             onClick={handleSubmitBlock}
                             disabled={!selectedReason || (selectedReason === 'أخرى (يرجى التحديد)' && !customReason.trim()) || blockTaskMutation.isPending}
-                            className="bg-red-500 hover:bg-red-600"
+                            className="bg-red-500 hover:bg-red-600 h-12 text-lg"
                         >
                             تأكيد الإبلاغ
                         </Button>
-                        <Button variant="outline" onClick={() => setShowBlockModal(false)}>
+                        <Button size="lg" variant="outline" onClick={() => setShowBlockModal(false)} className="h-12 text-lg">
                             إلغاء
                         </Button>
                     </DialogFooter>
