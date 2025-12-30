@@ -18,6 +18,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { PageHeader, EmptyState } from '@/components/shared';
+import { useRealtime } from '@/hooks';
 import { cn, formatDate } from '@/lib/utils';
 import type { AssessmentStatus, EntryType } from '@/types/enums';
 
@@ -127,6 +129,12 @@ export function WorkshopPage() {
         },
     });
 
+    // Real-time updates
+    useRealtime({
+        table: 'assessments',
+        queryKey: ['workshop-vehicles', debouncedSearch, statusFilter],
+    });
+
     // Filter by search locally
     const filteredAssessments = assessments?.filter((a) => {
         if (!debouncedSearch) return true;
@@ -149,16 +157,16 @@ export function WorkshopPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold">ساحة العمل</h1>
-                    <p className="text-muted-foreground">السيارات في الورشة حسب حالتها</p>
-                </div>
-                <Button onClick={() => navigate('/dashboard/reception/new')} className="gap-2">
-                    <Plus size={18} />
-                    استلام جديد
-                </Button>
-            </div>
+            <PageHeader
+                title="ساحة العمل"
+                description="السيارات في الورشة حسب حالتها"
+                actions={
+                    <Button onClick={() => navigate('/dashboard/reception/new')} className="gap-2">
+                        <Plus size={18} />
+                        استلام جديد
+                    </Button>
+                }
+            />
 
             {/* Status Cards - الحالات النشطة فقط */}
             <div className="grid grid-cols-2 gap-4">

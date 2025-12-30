@@ -41,6 +41,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/shared';
 
 
 // ============================================================
@@ -229,16 +230,16 @@ export function WarehousesPage() {
         <>
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold">إدارة المخازن</h1>
-                        <p className="text-muted-foreground">إنشاء وتعديل وحذف المخازن</p>
-                    </div>
-                    <Button className="gap-2" onClick={() => { resetForm(); setShowDialog(true); }}>
-                        <Plus size={18} />
-                        مخزن جديد
-                    </Button>
-                </div>
+                <PageHeader
+                    title="إدارة المخازن"
+                    description="إنشاء وتعديل وحذف المخازن"
+                    actions={
+                        <Button className="gap-2" onClick={() => { resetForm(); setShowDialog(true); }}>
+                            <Plus size={18} />
+                            مخزن جديد
+                        </Button>
+                    }
+                />
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

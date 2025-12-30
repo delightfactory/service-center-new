@@ -26,6 +26,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { cn, formatDate } from '@/lib/utils';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Profile Page - صفحة الملف الشخصي
@@ -140,37 +141,32 @@ export function ProfilePage() {
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <User className="text-primary" />
-                        الملف الشخصي
-                    </h1>
-                    <p className="text-muted-foreground">
-                        إدارة معلومات الحساب
-                    </p>
-                </div>
-                <div className="flex gap-2">
-                    {isEditing ? (
-                        <>
-                            <Button variant="outline" onClick={cancelEditing}>
-                                إلغاء
+            <PageHeader
+                title="الملف الشخصي"
+                description="إدارة معلومات الحساب"
+                actions={
+                    <div className="flex gap-2">
+                        {isEditing ? (
+                            <>
+                                <Button variant="outline" onClick={cancelEditing}>
+                                    إلغاء
+                                </Button>
+                                <Button
+                                    onClick={() => updateProfileMutation.mutate()}
+                                    disabled={updateProfileMutation.isPending}
+                                >
+                                    <Save size={16} className="ml-2" />
+                                    {updateProfileMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
+                                </Button>
+                            </>
+                        ) : (
+                            <Button variant="outline" onClick={() => setIsEditing(true)}>
+                                تعديل البيانات
                             </Button>
-                            <Button
-                                onClick={() => updateProfileMutation.mutate()}
-                                disabled={updateProfileMutation.isPending}
-                            >
-                                <Save size={16} className="ml-2" />
-                                {updateProfileMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
-                            </Button>
-                        </>
-                    ) : (
-                        <Button variant="outline" onClick={() => setIsEditing(true)}>
-                            تعديل البيانات
-                        </Button>
-                    )}
-                </div>
-            </div>
+                        )}
+                    </div>
+                }
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Profile Info Card */}

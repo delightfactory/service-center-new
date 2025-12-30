@@ -31,6 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { jobOrderService, type CreateJobOrderDTO } from '@/lib/services/operations/job-order.service';
 import type { AssessmentStatus, EntryType, JobCategory, PriorityLevel } from '@/types/enums';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Assessment Details Page
@@ -213,6 +214,9 @@ export function AssessmentDetailsPage() {
 
     return (
         <div className="space-y-6">
+            {/* Breadcrumbs */}
+            <PageHeader title="" showBreadcrumbs={true} className="pb-0" />
+
             {/* Header */}
             <div className="flex items-center gap-4">
                 <Button

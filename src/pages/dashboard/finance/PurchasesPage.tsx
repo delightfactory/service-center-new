@@ -49,6 +49,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import { PageHeader, EmptyState } from '@/components/shared';
+import { useRealtime } from '@/hooks';
 
 // ============================================================
 // Purchases Page - فواتير المشتريات
@@ -169,6 +171,13 @@ export function PurchasesPage() {
                 supplier: Array.isArray(inv.supplier) ? inv.supplier[0] : inv.supplier,
             })) as Invoice[];
         },
+    });
+
+    // Real-time updates
+    useRealtime({
+        table: 'invoices',
+        filter: "invoice_type=eq.purchase",
+        queryKey: ['purchase-invoices', statusFilter],
     });
 
     // Calculate stats
@@ -392,16 +401,16 @@ export function PurchasesPage() {
         <>
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold">فواتير المشتريات</h1>
-                        <p className="text-muted-foreground">إدارة مشتريات الأصناف من الموردين</p>
-                    </div>
-                    <Button className="gap-2" onClick={() => setShowDialog(true)}>
-                        <Plus size={18} />
-                        فاتورة شراء جديدة
-                    </Button>
-                </div>
+                <PageHeader
+                    title="فواتير المشتريات"
+                    description="إدارة مشتريات الأصناف من الموردين"
+                    actions={
+                        <Button className="gap-2" onClick={() => setShowDialog(true)}>
+                            <Plus size={18} />
+                            فاتورة شراء جديدة
+                        </Button>
+                    }
+                />
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -583,17 +592,17 @@ export function PurchasesPage() {
                                 </Table>
                             </div>
                         ) : (
-                            <div className="text-center py-12">
-                                <FileText size={48} className="mx-auto text-muted-foreground mb-4" />
-                                <h3 className="text-lg font-medium mb-2">لا توجد فواتير مشتريات</h3>
-                                <p className="text-muted-foreground mb-4">
-                                    ابدأ بإنشاء أول فاتورة شراء
-                                </p>
-                                <Button onClick={() => setShowDialog(true)}>
-                                    <Plus size={18} className="ml-2" />
-                                    فاتورة شراء جديدة
-                                </Button>
-                            </div>
+                            <EmptyState
+                                icon={FileText}
+                                title="لا توجد فواتير مشتريات"
+                                description="ابدأ بإنشاء أول فاتورة شراء"
+                                action={
+                                    <Button onClick={() => setShowDialog(true)}>
+                                        <Plus size={18} className="ml-2" />
+                                        فاتورة شراء جديدة
+                                    </Button>
+                                }
+                            />
                         )}
                     </CardContent>
                 </Card>

@@ -15,6 +15,7 @@ import {
     EntryTypeSelector,
     CustomerVehicleStep,
     VehicleDetailsStep,
+    Breadcrumbs,
 } from '@/components/shared';
 import type { EntryType } from '@/types/enums';
 import type { Customer, Vehicle } from '@/types/database';
@@ -205,6 +206,11 @@ export function ReceptionWizardPage() {
 
     return (
         <div className="min-h-screen bg-background">
+            {/* Breadcrumbs */}
+            <div className="max-w-lg mx-auto px-4 pt-4">
+                <Breadcrumbs />
+            </div>
+
             {/* Progress Header */}
             <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b">
                 <div className="max-w-lg mx-auto px-4 py-3">

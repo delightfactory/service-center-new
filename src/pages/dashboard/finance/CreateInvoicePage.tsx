@@ -36,6 +36,7 @@ import {
     TableFooter,
 } from '@/components/ui/table';
 import { cn, formatCurrency } from '@/lib/utils';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Create Invoice Page - إنشاء فاتورة
@@ -298,19 +299,11 @@ export function CreateInvoicePage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-                    <ArrowRight size={20} />
-                </Button>
-                <div>
-                    <h1 className="text-2xl font-bold">إنشاء فاتورة</h1>
-                    {jobOrder && (
-                        <p className="text-muted-foreground">
-                            من أمر الشغل: {jobOrder.code}
-                        </p>
-                    )}
-                </div>
-            </div>
+            <PageHeader
+                title="إنشاء فاتورة"
+                description={jobOrder ? `من أمر الشغل: ${jobOrder.code}` : undefined}
+                backLink="/dashboard/finance/invoices"
+            />
 
             {/* Warning if job order not completed */}
             {jobOrder && !['completed', 'review'].includes(jobOrder.status) && (

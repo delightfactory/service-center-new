@@ -31,6 +31,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import { PageHeader, EmptyState } from '@/components/shared';
 
 // ============================================================
 // Stock Movements Page - صفحة حركات المخزون
@@ -207,21 +208,16 @@ export function StockMovementsPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <ArrowRightLeft className="text-primary" />
-                        حركات المخزون
-                    </h1>
-                    <p className="text-muted-foreground">
-                        عرض جميع حركات الوارد والصادر والتسويات
-                    </p>
-                </div>
-                <Button variant="outline" onClick={() => refetch()}>
-                    <RefreshCw size={16} className="ml-2" />
-                    تحديث
-                </Button>
-            </div>
+            <PageHeader
+                title="حركات المخزون"
+                description="عرض جميع حركات الوارد والصادر والتسويات"
+                actions={
+                    <Button variant="outline" onClick={() => refetch()}>
+                        <RefreshCw size={16} className="ml-2" />
+                        تحديث
+                    </Button>
+                }
+            />
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -326,10 +322,11 @@ export function StockMovementsPage() {
                             {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
                         </div>
                     ) : filteredTransactions.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            <ArrowRightLeft size={48} className="mx-auto mb-4 opacity-50" />
-                            <p>لا توجد حركات</p>
-                        </div>
+                        <EmptyState
+                            icon={ArrowRightLeft}
+                            title="لا توجد حركات"
+                            description="لم يتم العثور على حركات مطابقة للبحث"
+                        />
                     ) : (
                         <div className="overflow-x-auto">
                             <Table>

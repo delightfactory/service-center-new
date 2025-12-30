@@ -48,6 +48,7 @@ import {
 import { EditProductModal } from '@/components/inventory';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import type { ProductType } from '@/types/enums';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Product Details Page - صفحة تفاصيل المنتج
@@ -288,6 +289,9 @@ export function ProductDetailsPage() {
 
     return (
         <div className="space-y-6" ref={printRef}>
+            {/* Breadcrumbs */}
+            <PageHeader title="" showBreadcrumbs={true} className="pb-0" />
+
             {/* Header */}
             <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div className="flex items-start gap-4">

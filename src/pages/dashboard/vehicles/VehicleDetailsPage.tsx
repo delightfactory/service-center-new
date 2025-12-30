@@ -41,6 +41,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { cn, formatDate } from '@/lib/utils';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Vehicle Details Page - صفحة تفاصيل المركبة
@@ -221,6 +222,9 @@ export function VehicleDetailsPage() {
 
     return (
         <div className="space-y-6">
+            {/* Breadcrumbs */}
+            <PageHeader title="" showBreadcrumbs={true} className="pb-0" />
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">

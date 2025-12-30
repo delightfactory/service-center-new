@@ -48,6 +48,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Users Page - صفحة المستخدمين
@@ -311,18 +312,16 @@ export function UsersPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold">المستخدمين</h1>
-                    <p className="text-muted-foreground">
-                        إدارة المستخدمين والصلاحيات
-                    </p>
-                </div>
-                <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
-                    <Plus size={18} />
-                    مستخدم جديد
-                </Button>
-            </div>
+            <PageHeader
+                title="المستخدمين"
+                description="إدارة المستخدمين والصلاحيات"
+                actions={
+                    <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
+                        <Plus size={18} />
+                        مستخدم جديد
+                    </Button>
+                }
+            />
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

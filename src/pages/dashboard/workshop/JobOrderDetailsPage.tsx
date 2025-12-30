@@ -51,6 +51,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn, formatDate, formatCurrency } from '@/lib/utils';
+import { PageHeader } from '@/components/shared';
+import { useRealtime } from '@/hooks';
 import {
     JOB_STATUSES,
     JOB_CATEGORIES,
@@ -298,6 +300,32 @@ export function JobOrderDetailsPage() {
         enabled: !!id,
     });
 
+    // Real-time updates for all related tables
+    useRealtime({
+        table: 'job_orders',
+        filter: id ? `id=eq.${id}` : undefined,
+        queryKey: ['job-order', id],
+        enabled: !!id,
+    });
+    useRealtime({
+        table: 'job_items',
+        filter: id ? `job_order_id=eq.${id}` : undefined,
+        queryKey: ['job-items', id],
+        enabled: !!id,
+    });
+    useRealtime({
+        table: 'job_tasks',
+        filter: id ? `job_order_id=eq.${id}` : undefined,
+        queryKey: ['job-tasks', id],
+        enabled: !!id,
+    });
+    useRealtime({
+        table: 'job_technicians',
+        filter: id ? `job_order_id=eq.${id}` : undefined,
+        queryKey: ['job-technicians', id],
+        enabled: !!id,
+    });
+
     // Mutations
     const deleteItemMutation = useMutation({
         mutationFn: async (itemId: string) => {
@@ -485,6 +513,9 @@ export function JobOrderDetailsPage() {
 
     return (
         <div className="space-y-4">
+            {/* Breadcrumbs */}
+            <PageHeader title="" showBreadcrumbs={true} className="pb-0" />
+
             {/* ============ HEADER ============ */}
             <div className="bg-card border rounded-xl p-4 sticky top-0 z-10">
                 {/* الصف العلوي */}

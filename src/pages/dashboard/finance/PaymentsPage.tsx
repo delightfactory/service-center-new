@@ -48,6 +48,8 @@ import {
     TabsTrigger,
 } from '@/components/ui/tabs';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import { PageHeader, EmptyState } from '@/components/shared';
+import { useRealtime } from '@/hooks';
 
 // ============================================================
 // Payments Page - صفحة المدفوعات
@@ -201,6 +203,16 @@ export function PaymentsPage() {
         },
     });
 
+    // Real-time updates
+    useRealtime({
+        table: 'payments',
+        queryKey: ['payments'],
+    });
+    useRealtime({
+        table: 'treasuries',
+        queryKey: ['treasuries-list'],
+    });
+
     // Filter and search payments
     const filteredPayments = useMemo(() => {
         if (!payments) return [];
@@ -339,21 +351,16 @@ export function PaymentsPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Receipt className="text-primary" />
-                        المدفوعات
-                    </h1>
-                    <p className="text-muted-foreground">
-                        إدارة سندات القبض والصرف
-                    </p>
-                </div>
-                <Button onClick={() => setShowDialog(true)} className="gap-2">
-                    <Plus size={18} />
-                    سند جديد
-                </Button>
-            </div>
+            <PageHeader
+                title="المدفوعات"
+                description="إدارة سندات القبض والصرف"
+                actions={
+                    <Button onClick={() => setShowDialog(true)} className="gap-2">
+                        <Plus size={18} />
+                        سند جديد
+                    </Button>
+                }
+            />
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -453,9 +460,11 @@ export function PaymentsPage() {
                                     {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
                                 </div>
                             ) : filteredPayments.length === 0 ? (
-                                <div className="text-center py-12 text-muted-foreground">
-                                    لا توجد مدفوعات
-                                </div>
+                                <EmptyState
+                                    icon={Receipt}
+                                    title="لا توجد مدفوعات"
+                                    description="لم يتم العثور على سندات مطابقة للبحث"
+                                />
                             ) : (
                                 <div className="border rounded-lg overflow-hidden">
                                     <Table>

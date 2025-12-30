@@ -48,6 +48,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import { PageHeader, EmptyState } from '@/components/shared';
+import { useRealtime } from '@/hooks';
 
 // ============================================================
 // Expenses Page - صفحة المصروفات
@@ -137,6 +139,12 @@ export function ExpensesPage() {
 
             return items;
         },
+    });
+
+    // Real-time updates
+    useRealtime({
+        table: 'expenses',
+        queryKey: ['expenses', statusFilter],
     });
 
     // Fetch categories for form
@@ -291,18 +299,16 @@ export function ExpensesPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold">المصروفات</h1>
-                    <p className="text-muted-foreground">
-                        إدارة ومتابعة المصروفات
-                    </p>
-                </div>
-                <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
-                    <Plus size={18} />
-                    مصروف جديد
-                </Button>
-            </div>
+            <PageHeader
+                title="المصروفات"
+                description="إدارة ومتابعة المصروفات"
+                actions={
+                    <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
+                        <Plus size={18} />
+                        مصروف جديد
+                    </Button>
+                }
+            />
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -391,13 +397,17 @@ export function ExpensesPage() {
                             ))}
                         </div>
                     ) : !expenses || expenses.length === 0 ? (
-                        <div className="text-center py-12">
-                            <Receipt size={48} className="mx-auto text-muted-foreground/50 mb-4" />
-                            <p className="text-muted-foreground">لا توجد مصروفات</p>
-                            <Button variant="link" onClick={() => setShowAddModal(true)}>
-                                إضافة مصروف جديد
-                            </Button>
-                        </div>
+                        <EmptyState
+                            icon={Receipt}
+                            title="لا توجد مصروفات"
+                            description="لم يتم العثور على مصروفات"
+                            action={
+                                <Button onClick={() => setShowAddModal(true)}>
+                                    <Plus size={18} className="ml-2" />
+                                    إضافة مصروف جديد
+                                </Button>
+                            }
+                        />
                     ) : (
                         <div className="overflow-x-auto">
                             <Table>

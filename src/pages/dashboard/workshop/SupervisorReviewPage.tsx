@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn, formatDate } from '@/lib/utils';
 import type { PriorityLevel } from '@/types/enums';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Supervisor Review Page - صفحة مراجعة المشرف
@@ -214,6 +215,9 @@ export function SupervisorReviewPage() {
 
     return (
         <div className="space-y-6">
+            {/* Breadcrumbs */}
+            <PageHeader title="" showBreadcrumbs={true} className="pb-0" />
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>

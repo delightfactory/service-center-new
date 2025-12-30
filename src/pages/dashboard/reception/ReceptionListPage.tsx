@@ -20,6 +20,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { PageHeader, EmptyState } from '@/components/shared';
+import { useRealtime } from '@/hooks';
 import type { AssessmentStatus, EntryType } from '@/types/enums';
 
 // ============================================================
@@ -89,6 +91,12 @@ export function ReceptionListPage() {
         },
     });
 
+    // Real-time updates
+    useRealtime({
+        table: 'assessments',
+        queryKey: ['assessments', debouncedSearch, statusFilter],
+    });
+
     const assessments = assessmentsData?.data || [];
 
     // Filter by search locally
@@ -106,16 +114,16 @@ export function ReceptionListPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold">الاستقبال</h1>
-                    <p className="text-muted-foreground">إدارة طلبات الاستلام وتقارير الدخول</p>
-                </div>
-                <Button onClick={() => navigate('/dashboard/reception/new')} className="gap-2">
-                    <Plus size={18} />
-                    استلام جديد
-                </Button>
-            </div>
+            <PageHeader
+                title="الاستقبال"
+                description="إدارة طلبات الاستلام وتقارير الدخول"
+                actions={
+                    <Button onClick={() => navigate('/dashboard/reception/new')} className="gap-2">
+                        <Plus size={18} />
+                        استلام جديد
+                    </Button>
+                }
+            />
 
             {/* Filters */}
             <Card>

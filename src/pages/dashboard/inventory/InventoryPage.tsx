@@ -28,6 +28,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { cn, formatCurrency } from '@/lib/utils';
+import { PageHeader, EmptyState } from '@/components/shared';
 
 // ============================================================
 // Inventory Page - صفحة الأرصدة
@@ -152,14 +153,10 @@ export function InventoryPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold">أرصدة المخزون</h1>
-                    <p className="text-muted-foreground">
-                        متابعة الأرصدة في كل المخازن
-                    </p>
-                </div>
-            </div>
+            <PageHeader
+                title="أرصدة المخزون"
+                description="متابعة الأرصدة في كل المخازن"
+            />
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -279,10 +276,11 @@ export function InventoryPage() {
                             ))}
                         </div>
                     ) : !inventoryItems || inventoryItems.length === 0 ? (
-                        <div className="text-center py-12">
-                            <Package size={48} className="mx-auto text-muted-foreground/50 mb-4" />
-                            <p className="text-muted-foreground">لا توجد أرصدة</p>
-                        </div>
+                        <EmptyState
+                            icon={Package}
+                            title="لا توجد أرصدة"
+                            description="لم يتم العثور على أرصدة مخزون"
+                        />
                     ) : (
                         <div className="overflow-x-auto">
                             <Table>

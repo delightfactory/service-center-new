@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Bench Work Page - صفحة صيانة الكنترولات
@@ -203,6 +204,9 @@ export function BenchWorkPage() {
 
     return (
         <div className="space-y-6">
+            {/* Breadcrumbs */}
+            <PageHeader title="" showBreadcrumbs={true} className="pb-0" />
+
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>

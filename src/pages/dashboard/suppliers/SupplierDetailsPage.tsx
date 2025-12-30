@@ -39,6 +39,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Supplier Details Page - صفحة تفاصيل المورد
@@ -234,6 +235,9 @@ export function SupplierDetailsPage() {
 
     return (
         <div className="space-y-6">
+            {/* Breadcrumbs */}
+            <PageHeader title="" showBreadcrumbs={true} className="pb-0" />
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">

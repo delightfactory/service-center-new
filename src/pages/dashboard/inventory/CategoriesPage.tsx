@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PageHeader, EmptyState } from '@/components/shared';
 
 // ============================================================
 // Categories Page - صفحة التصنيفات
@@ -186,18 +187,16 @@ export function CategoriesPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold">التصنيفات</h1>
-                    <p className="text-muted-foreground">
-                        إدارة تصنيفات المنتجات والخدمات
-                    </p>
-                </div>
-                <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
-                    <Plus size={18} />
-                    إضافة تصنيف
-                </Button>
-            </div>
+            <PageHeader
+                title="التصنيفات"
+                description="إدارة تصنيفات المنتجات والخدمات"
+                actions={
+                    <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
+                        <Plus size={18} />
+                        إضافة تصنيف
+                    </Button>
+                }
+            />
 
             {/* Categories Table */}
             <Card>
@@ -215,13 +214,17 @@ export function CategoriesPage() {
                             ))}
                         </div>
                     ) : !categories || categories.length === 0 ? (
-                        <div className="text-center py-12">
-                            <FolderTree size={48} className="mx-auto text-muted-foreground/50 mb-4" />
-                            <p className="text-muted-foreground">لا توجد تصنيفات</p>
-                            <Button variant="link" onClick={() => setShowAddModal(true)}>
-                                إضافة تصنيف جديد
-                            </Button>
-                        </div>
+                        <EmptyState
+                            icon={FolderTree}
+                            title="لا توجد تصنيفات"
+                            description="ابدأ بإنشاء تصنيفات للمنتجات"
+                            action={
+                                <Button onClick={() => setShowAddModal(true)}>
+                                    <Plus size={18} className="ml-2" />
+                                    إضافة تصنيف جديد
+                                </Button>
+                            }
+                        />
                     ) : (
                         <Table>
                             <TableHeader>

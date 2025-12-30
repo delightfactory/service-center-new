@@ -27,6 +27,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { PageHeader, EmptyState } from '@/components/shared';
 import { cn, formatPhone, getInitials } from '@/lib/utils';
 import type { Customer } from '@/types';
 import type { CustomerType } from '@/types/enums';
@@ -68,19 +69,19 @@ export function CustomersPage() {
 
     return (
         <div className="space-y-6">
-            {/* Page header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="page-header">
-                    <h1 className="page-title">العملاء</h1>
-                    <p className="page-description">إدارة بيانات العملاء ومركباتهم</p>
-                </div>
-                <Button asChild size="lg" className="gap-2">
-                    <Link to="/dashboard/customers/new">
-                        <Plus size={20} />
-                        <span>عميل جديد</span>
-                    </Link>
-                </Button>
-            </div>
+            {/* Header */}
+            <PageHeader
+                title="العملاء"
+                description="إدارة بيانات العملاء ومركباتهم"
+                actions={
+                    <Button asChild size="lg" className="gap-2">
+                        <Link to="/dashboard/customers/new">
+                            <Plus size={20} />
+                            <span>عميل جديد</span>
+                        </Link>
+                    </Button>
+                }
+            />
 
             {/* Search and filters */}
             <Card>
@@ -168,25 +169,21 @@ export function CustomersPage() {
 
             {/* Empty state */}
             {!isLoading && !error && filteredCustomers.length === 0 && (
-                <Card>
-                    <CardContent className="p-12 text-center">
-                        <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
-                            <User size={32} className="text-muted-foreground" />
-                        </div>
-                        <h3 className="text-lg font-medium mb-2">لا يوجد عملاء</h3>
-                        <p className="text-muted-foreground mb-4">
-                            {searchQuery ? 'لا توجد نتائج للبحث' : 'ابدأ بإضافة أول عميل'}
-                        </p>
-                        {!searchQuery && (
+                <EmptyState
+                    icon={User}
+                    title="لا يوجد عملاء"
+                    description={searchQuery ? 'لا توجد نتائج للبحث' : 'ابدأ بإضافة أول عميل'}
+                    action={
+                        !searchQuery ? (
                             <Button asChild>
                                 <Link to="/dashboard/customers/new">
                                     <Plus size={18} className="ml-2" />
                                     إضافة عميل
                                 </Link>
                             </Button>
-                        )}
-                    </CardContent>
-                </Card>
+                        ) : undefined
+                    }
+                />
             )}
 
             {/* Customers grid */}

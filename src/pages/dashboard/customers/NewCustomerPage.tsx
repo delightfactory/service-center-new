@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ArrowRight, Save, User, Building2 } from 'lucide-react';
 import type { CustomerType } from '@/types/enums';
+import { PageHeader } from '@/components/shared';
 
 export function NewCustomerPage() {
     const navigate = useNavigate();
@@ -102,16 +103,12 @@ export function NewCustomerPage() {
 
     return (
         <div className="max-w-2xl mx-auto space-y-6">
-            {/* Page header */}
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-                    <ArrowRight size={20} />
-                </Button>
-                <div>
-                    <h1 className="text-2xl font-bold">إضافة عميل جديد</h1>
-                    <p className="text-muted-foreground">أضف بيانات العميل الجديد</p>
-                </div>
-            </div>
+            {/* Header */}
+            <PageHeader
+                title="إضافة عميل جديد"
+                description="أضف بيانات العميل الجديد"
+                backLink="/dashboard/customers"
+            />
 
             <form onSubmit={handleSubmit}>
                 <Card>

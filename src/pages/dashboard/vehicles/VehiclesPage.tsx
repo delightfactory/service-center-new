@@ -25,6 +25,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { PageHeader, EmptyState } from '@/components/shared';
 
 export function VehiclesPage() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -54,19 +55,19 @@ export function VehiclesPage() {
 
     return (
         <div className="space-y-6">
-            {/* Page header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="page-header">
-                    <h1 className="page-title">المركبات</h1>
-                    <p className="page-description">جميع المركبات المسجلة في النظام</p>
-                </div>
-                <Button asChild size="lg" className="gap-2">
-                    <Link to="/dashboard/vehicles/new">
-                        <Plus size={20} />
-                        <span>مركبة جديدة</span>
-                    </Link>
-                </Button>
-            </div>
+            {/* Header */}
+            <PageHeader
+                title="المركبات"
+                description="جميع المركبات المسجلة في النظام"
+                actions={
+                    <Button asChild size="lg" className="gap-2">
+                        <Link to="/dashboard/vehicles/new">
+                            <Plus size={20} />
+                            <span>مركبة جديدة</span>
+                        </Link>
+                    </Button>
+                }
+            />
 
             {/* Search */}
             <Card>

@@ -40,6 +40,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn, formatCurrency } from '@/lib/utils';
+import { PageHeader, EmptyState } from '@/components/shared';
+import { useRealtime } from '@/hooks';
 
 // ============================================================
 // Treasuries Page - صفحة الخزن
@@ -105,6 +107,12 @@ export function TreasuriesPage() {
                 branch: Array.isArray(t.branch) ? t.branch[0] : t.branch,
             })) as Treasury[];
         },
+    });
+
+    // Real-time updates
+    useRealtime({
+        table: 'treasuries',
+        queryKey: ['treasuries'],
     });
 
     // Reset form
@@ -274,24 +282,22 @@ export function TreasuriesPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold">الخزن</h1>
-                    <p className="text-muted-foreground">
-                        إدارة الخزن والأرصدة
-                    </p>
-                </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" className="gap-2" onClick={() => setShowTransferModal(true)}>
-                        <ArrowRightLeft size={18} />
-                        تحويل
-                    </Button>
-                    <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
-                        <Plus size={18} />
-                        خزنة جديدة
-                    </Button>
-                </div>
-            </div>
+            <PageHeader
+                title="الخزن"
+                description="إدارة الخزن والأرصدة"
+                actions={
+                    <div className="flex gap-2">
+                        <Button variant="outline" className="gap-2" onClick={() => setShowTransferModal(true)}>
+                            <ArrowRightLeft size={18} />
+                            تحويل
+                        </Button>
+                        <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
+                            <Plus size={18} />
+                            خزنة جديدة
+                        </Button>
+                    </div>
+                }
+            />
 
             {/* Totals Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -357,15 +363,17 @@ export function TreasuriesPage() {
                     ))}
                 </div>
             ) : !treasuries || treasuries.length === 0 ? (
-                <Card>
-                    <CardContent className="py-12 text-center">
-                        <Wallet size={48} className="mx-auto text-muted-foreground/50 mb-4" />
-                        <p className="text-muted-foreground">لا توجد خزن</p>
-                        <Button variant="link" onClick={() => setShowAddModal(true)}>
+                <EmptyState
+                    icon={Wallet}
+                    title="لا توجد خزن"
+                    description="ابدأ بإنشاء خزنة جديدة"
+                    action={
+                        <Button onClick={() => setShowAddModal(true)}>
+                            <Plus size={18} className="ml-2" />
                             إضافة خزنة جديدة
                         </Button>
-                    </CardContent>
-                </Card>
+                    }
+                />
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {treasuries.map((treasury) => {

@@ -41,6 +41,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { cn, formatDate } from '@/lib/utils';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Warehouse Transfers Page - التحويلات بين المخازن (متعدد الأصناف)
@@ -362,16 +363,16 @@ export function WarehouseTransfersPage() {
         <>
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold">التحويلات بين المخازن</h1>
-                        <p className="text-muted-foreground">نقل المنتجات بين المخازن المختلفة</p>
-                    </div>
-                    <Button className="gap-2" onClick={() => setShowDialog(true)}>
-                        <Plus size={18} />
-                        تحويل جديد
-                    </Button>
-                </div>
+                <PageHeader
+                    title="التحويلات بين المخازن"
+                    description="نقل المنتجات بين المخازن المختلفة"
+                    actions={
+                        <Button className="gap-2" onClick={() => setShowDialog(true)}>
+                            <Plus size={18} />
+                            تحويل جديد
+                        </Button>
+                    }
+                />
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

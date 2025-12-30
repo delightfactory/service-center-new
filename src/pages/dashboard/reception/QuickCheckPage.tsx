@@ -40,6 +40,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { cn, formatCurrency } from '@/lib/utils';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Quick Check Page - صفحة الكشف السريع
@@ -342,6 +343,9 @@ export function QuickCheckPage() {
 
     return (
         <div className="space-y-6">
+            {/* Breadcrumbs */}
+            <PageHeader title="" showBreadcrumbs={true} className="pb-0" />
+
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>

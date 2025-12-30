@@ -50,6 +50,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Expense Categories Page - صفحة بنود المصروفات
@@ -211,18 +212,16 @@ export function ExpenseCategoriesPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold">بنود المصروفات</h1>
-                    <p className="text-muted-foreground">
-                        إدارة تصنيفات المصروفات
-                    </p>
-                </div>
-                <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
-                    <Plus size={18} />
-                    بند جديد
-                </Button>
-            </div>
+            <PageHeader
+                title="بنود المصروفات"
+                description="إدارة تصنيفات المصروفات"
+                actions={
+                    <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
+                        <Plus size={18} />
+                        بند جديد
+                    </Button>
+                }
+            />
 
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

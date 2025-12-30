@@ -50,6 +50,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { PageHeader, EmptyState } from '@/components/shared';
 import { cn, formatCurrency, formatPhone } from '@/lib/utils';
 
 // ============================================================
@@ -237,17 +238,17 @@ export function SuppliersPage() {
     return (
         <>
             <div className="space-y-6">
-                {/* Page header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold">الموردين</h1>
-                        <p className="text-muted-foreground">إدارة بيانات الموردين ومستحقاتهم</p>
-                    </div>
-                    <Button className="gap-2" onClick={() => handleOpenDialog()}>
-                        <Plus size={18} />
-                        مورد جديد
-                    </Button>
-                </div>
+                {/* Header */}
+                <PageHeader
+                    title="الموردين"
+                    description="إدارة بيانات الموردين ومستحقاتهم"
+                    actions={
+                        <Button className="gap-2" onClick={() => handleOpenDialog()}>
+                            <Plus size={18} />
+                            مورد جديد
+                        </Button>
+                    }
+                />
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -427,19 +428,19 @@ export function SuppliersPage() {
                                 </Table>
                             </div>
                         ) : (
-                            <div className="text-center py-12">
-                                <Building2 size={48} className="mx-auto text-muted-foreground mb-4" />
-                                <h3 className="text-lg font-medium mb-2">لا يوجد موردين</h3>
-                                <p className="text-muted-foreground mb-4">
-                                    {searchQuery ? 'لا توجد نتائج للبحث' : 'ابدأ بإضافة أول مورد'}
-                                </p>
-                                {!searchQuery && (
-                                    <Button onClick={() => handleOpenDialog()}>
-                                        <Plus size={18} className="ml-2" />
-                                        إضافة مورد
-                                    </Button>
-                                )}
-                            </div>
+                            <EmptyState
+                                icon={Building2}
+                                title="لا يوجد موردين"
+                                description={searchQuery ? 'لا توجد نتائج للبحث' : 'ابدأ بإضافة أول مورد'}
+                                action={
+                                    !searchQuery ? (
+                                        <Button onClick={() => handleOpenDialog()}>
+                                            <Plus size={18} className="ml-2" />
+                                            إضافة مورد
+                                        </Button>
+                                    ) : undefined
+                                }
+                            />
                         )}
                     </CardContent>
                 </Card>

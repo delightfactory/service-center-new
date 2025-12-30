@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/table';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { InvoicePrintTemplate } from '@/components/print';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Invoice Details Page - صفحة تفاصيل الفاتورة
@@ -332,36 +333,25 @@ export function InvoiceDetailsPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/finance/invoices')}>
-                        <ArrowRight size={20} />
-                    </Button>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-2xl font-bold font-mono">{invoice.code}</h1>
-                            <Badge className={statusColors[invoice.status] || 'bg-gray-100'}>
-                                {statusLabels[invoice.status] || invoice.status}
-                            </Badge>
-                        </div>
-                        <p className="text-muted-foreground">
-                            {invoiceTypeLabels[invoice.invoice_type] || invoice.invoice_type}
-                        </p>
-                    </div>
-                </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => handlePrint()}>
-                        <Printer size={16} className="ml-2" />
-                        طباعة
-                    </Button>
-                    {canAddPayment && (
-                        <Button onClick={openPaymentDialog}>
-                            <Plus size={16} className="ml-2" />
-                            استلام دفعة
+            <PageHeader
+                title={invoice.code}
+                description={invoiceTypeLabels[invoice.invoice_type] || invoice.invoice_type}
+                backLink="/dashboard/finance/invoices"
+                actions={
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => handlePrint()}>
+                            <Printer size={16} className="ml-2" />
+                            طباعة
                         </Button>
-                    )}
-                </div>
-            </div>
+                        {canAddPayment && (
+                            <Button onClick={openPaymentDialog}>
+                                <Plus size={16} className="ml-2" />
+                                استلام دفعة
+                            </Button>
+                        )}
+                    </div>
+                }
+            />
 
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

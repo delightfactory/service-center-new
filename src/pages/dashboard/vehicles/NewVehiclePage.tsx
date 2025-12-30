@@ -21,6 +21,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // New Vehicle Page - إضافة مركبة جديدة
@@ -142,20 +143,11 @@ export function NewVehiclePage() {
     return (
         <div className="space-y-6 max-w-2xl mx-auto">
             {/* Header */}
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-                    <ArrowRight size={20} />
-                </Button>
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Car className="text-primary" />
-                        إضافة مركبة جديدة
-                    </h1>
-                    <p className="text-muted-foreground">
-                        أدخل بيانات المركبة
-                    </p>
-                </div>
-            </div>
+            <PageHeader
+                title="إضافة مركبة جديدة"
+                description="أدخل بيانات المركبة"
+                backLink="/dashboard/vehicles"
+            />
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Customer Selection */}

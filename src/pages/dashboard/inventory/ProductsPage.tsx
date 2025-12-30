@@ -40,6 +40,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { cn, formatCurrency } from '@/lib/utils';
+import { PageHeader, EmptyState } from '@/components/shared';
 import { AddProductModal, ProductImportModal, ExportProductsButton } from '@/components/inventory';
 
 // ============================================================
@@ -189,24 +190,22 @@ export function ProductsPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold">المنتجات والخدمات</h1>
-                    <p className="text-muted-foreground">
-                        إدارة قطع الغيار والمستهلكات والخدمات
-                    </p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <ExportProductsButton />
-                    <Button variant="outline" size="sm" onClick={() => setShowImportModal(true)}>
-                        استيراد
-                    </Button>
-                    <Button className="gap-2" onClick={() => setShowAddModal(true)}>
-                        <Plus size={18} />
-                        إضافة منتج
-                    </Button>
-                </div>
-            </div>
+            <PageHeader
+                title="المنتجات والخدمات"
+                description="إدارة قطع الغيار والمستهلكات والخدمات"
+                actions={
+                    <div className="flex items-center gap-2">
+                        <ExportProductsButton />
+                        <Button variant="outline" size="sm" onClick={() => setShowImportModal(true)}>
+                            استيراد
+                        </Button>
+                        <Button className="gap-2" onClick={() => setShowAddModal(true)}>
+                            <Plus size={18} />
+                            إضافة منتج
+                        </Button>
+                    </div>
+                }
+            />
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -337,13 +336,17 @@ export function ProductsPage() {
                             ))}
                         </div>
                     ) : !products || products.length === 0 ? (
-                        <div className="text-center py-12">
-                            <Package size={48} className="mx-auto text-muted-foreground/50 mb-4" />
-                            <p className="text-muted-foreground">لا توجد منتجات</p>
-                            <Button variant="link" onClick={() => setShowAddModal(true)}>
-                                إضافة منتج جديد
-                            </Button>
-                        </div>
+                        <EmptyState
+                            icon={Package}
+                            title="لا توجد منتجات"
+                            description="ابدأ بإضافة منتجات وخدمات جديدة"
+                            action={
+                                <Button onClick={() => setShowAddModal(true)}>
+                                    <Plus size={18} className="ml-2" />
+                                    إضافة منتج جديد
+                                </Button>
+                            }
+                        />
                     ) : (
                         <div className="overflow-x-auto">
                             <Table>

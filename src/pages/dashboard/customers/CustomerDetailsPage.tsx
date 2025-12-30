@@ -42,6 +42,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Customer Details Page - صفحة تفاصيل العميل
@@ -304,32 +305,23 @@ export function CustomerDetailsPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/customers')}>
-                        <ArrowRight size={20} />
-                    </Button>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-2xl font-bold">{customer.name}</h1>
-                            <Badge variant={customer.is_active ? 'default' : 'secondary'}>
-                                {customer.is_active ? 'نشط' : 'غير نشط'}
-                            </Badge>
-                        </div>
-                        <p className="text-muted-foreground font-mono">{customer.code}</p>
+            <PageHeader
+                title={customer.name}
+                description={customer.code}
+                backLink="/dashboard/customers"
+                actions={
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={openEditDialog}>
+                            <Edit size={16} className="ml-2" />
+                            تعديل
+                        </Button>
+                        <Button onClick={() => navigate(`/dashboard/reception/new?customer=${id}`)}>
+                            <Plus size={16} className="ml-2" />
+                            استقبال جديد
+                        </Button>
                     </div>
-                </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" onClick={openEditDialog}>
-                        <Edit size={16} className="ml-2" />
-                        تعديل
-                    </Button>
-                    <Button onClick={() => navigate(`/dashboard/reception/new?customer=${id}`)}>
-                        <Plus size={16} className="ml-2" />
-                        استقبال جديد
-                    </Button>
-                </div>
-            </div>
+                }
+            />
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

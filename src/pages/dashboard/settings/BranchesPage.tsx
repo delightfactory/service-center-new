@@ -34,6 +34,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/shared';
 
 // ============================================================
 // Branches Page - صفحة الفروع
@@ -160,18 +161,16 @@ export function BranchesPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold">الفروع</h1>
-                    <p className="text-muted-foreground">
-                        إدارة فروع مركز الصيانة
-                    </p>
-                </div>
-                <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
-                    <Plus size={18} />
-                    فرع جديد
-                </Button>
-            </div>
+            <PageHeader
+                title="الفروع"
+                description="إدارة فروع مركز الصيانة"
+                actions={
+                    <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
+                        <Plus size={18} />
+                        فرع جديد
+                    </Button>
+                }
+            />
 
             {/* Branches Grid */}
             {isLoading ? (

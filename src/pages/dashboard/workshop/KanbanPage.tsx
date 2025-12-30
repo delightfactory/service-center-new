@@ -17,6 +17,8 @@ import {
     Receipt,
 } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
+import { PageHeader } from '@/components/shared';
+import { useRealtime } from '@/hooks';
 import { JOB_STATUSES, JOB_CATEGORIES, PRIORITY_LEVELS, type JobStatus, type PriorityLevel } from '@/types/enums';
 
 // ============================================================
@@ -90,6 +92,12 @@ export function KanbanPage() {
         refetchInterval: 30000, // Refresh every 30 seconds
     });
 
+    // Real-time updates
+    useRealtime({
+        table: 'job_orders',
+        queryKey: ['job-orders-kanban'],
+    });
+
     // Group jobs by status
     const jobsByStatus = React.useMemo(() => {
         const grouped: Record<JobStatus, JobOrder[]> = {
@@ -115,25 +123,19 @@ export function KanbanPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" asChild>
+            <PageHeader
+                title="لوحة Kanban"
+                description="عرض أوامر الشغل بحسب الحالة"
+                backLink="/dashboard/workshop"
+                actions={
+                    <Button variant="outline" asChild className="gap-2">
                         <Link to="/dashboard/workshop">
-                            <ArrowRight size={20} />
+                            <List size={18} />
+                            عرض القائمة
                         </Link>
                     </Button>
-                    <div>
-                        <h1 className="text-2xl font-bold">لوحة Kanban</h1>
-                        <p className="text-muted-foreground">عرض أوامر الشغل بحسب الحالة</p>
-                    </div>
-                </div>
-                <Button variant="outline" asChild className="gap-2">
-                    <Link to="/dashboard/workshop">
-                        <List size={18} />
-                        عرض القائمة
-                    </Link>
-                </Button>
-            </div>
+                }
+            />
 
             {/* Loading */}
             {isLoading && (

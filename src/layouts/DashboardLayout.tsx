@@ -17,6 +17,8 @@ import {
     Search,
     Menu,
     X,
+    Building2,
+    Car,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -66,14 +68,18 @@ const navigation: NavItem[] = [
         ],
     },
     {
-        title: 'العملاء',
+        title: 'العملاء والمركبات',
         href: '/dashboard/customers',
-        icon: Users,
+        icon: Car,
         children: [
             { title: 'قائمة العملاء', href: '/dashboard/customers' },
             { title: 'المركبات', href: '/dashboard/vehicles' },
-            { title: 'الموردين', href: '/dashboard/suppliers' },
         ],
+    },
+    {
+        title: 'الموردين',
+        href: '/dashboard/suppliers',
+        icon: Building2,
     },
     {
         title: 'المخزون',
@@ -110,6 +116,7 @@ const navigation: NavItem[] = [
         roles: ['admin', 'manager'],
     },
 ];
+
 
 export function DashboardLayout() {
     const { user, profile, signOut, isAuthenticated, loading } = useAuth();

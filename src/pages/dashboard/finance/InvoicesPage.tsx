@@ -40,6 +40,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { PaymentModal } from '@/components/finance';
+import { PageHeader, EmptyState } from '@/components/shared';
+import { useRealtime } from '@/hooks';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 
 // ============================================================
@@ -154,6 +156,16 @@ export function InvoicesPage() {
         },
     });
 
+    // Real-time updates
+    useRealtime({
+        table: 'invoices',
+        queryKey: ['invoices', searchQuery, typeFilter, statusFilter],
+    });
+    useRealtime({
+        table: 'payments',
+        queryKey: ['invoices', searchQuery, typeFilter, statusFilter],
+    });
+
     // Calculate stats
     const stats = React.useMemo(() => {
         if (!invoices) return { total: 0, totalSales: 0, unpaid: 0, overdue: 0 };
@@ -211,20 +223,18 @@ export function InvoicesPage() {
     });
 
     return (
-        <>
+        <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold">الفواتير</h1>
-                    <p className="text-muted-foreground">
-                        إدارة فواتير المبيعات والمشتريات
-                    </p>
-                </div>
-                <Button className="gap-2" onClick={() => navigate('/dashboard/finance/invoices/new')}>
-                    <Plus size={18} />
-                    فاتورة جديدة
-                </Button>
-            </div>
+            <PageHeader
+                title="الفواتير"
+                description="إدارة فواتير المبيعات والمشتريات"
+                actions={
+                    <Button className="gap-2" onClick={() => navigate('/dashboard/finance/invoices/new')}>
+                        <Plus size={18} />
+                        فاتورة جديدة
+                    </Button>
+                }
+            />
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -346,13 +356,17 @@ export function InvoicesPage() {
                             ))}
                         </div>
                     ) : !invoices || invoices.length === 0 ? (
-                        <div className="text-center py-12">
-                            <FileText size={48} className="mx-auto text-muted-foreground/50 mb-4" />
-                            <p className="text-muted-foreground">لا توجد فواتير</p>
-                            <Button variant="link" onClick={() => navigate('/dashboard/finance/invoices/new')}>
-                                إنشاء فاتورة جديدة
-                            </Button>
-                        </div>
+                        <EmptyState
+                            icon={FileText}
+                            title="لا توجد فواتير"
+                            description="لم يتم العثور على فواتير مطابقة للبحث"
+                            action={
+                                <Button onClick={() => navigate('/dashboard/finance/invoices/new')}>
+                                    <Plus size={18} className="ml-2" />
+                                    إنشاء فاتورة جديدة
+                                </Button>
+                            }
+                        />
                     ) : (
                         <div className="overflow-x-auto">
                             <Table>
@@ -499,7 +513,7 @@ export function InvoicesPage() {
                 onOpenChange={setShowPaymentModal}
                 invoice={selectedInvoice}
             />
-        </>
+        </div>
     );
 }
 
