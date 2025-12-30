@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { NotificationToast } from '@/components/ui/NotificationToast';
+import { PWAUpdatePrompt } from '@/components/common/PWAUpdatePrompt';
 import { AppRouter } from '@/router';
 import './index.css';
 
@@ -23,6 +24,7 @@ function App() {
                 <NotificationProvider>
                     <AppRouter />
                     <NotificationToast />
+                    <PWAUpdatePrompt />
                 </NotificationProvider>
             </AuthProvider>
         </QueryClientProvider>
@@ -30,3 +32,4 @@ function App() {
 }
 
 export default App;
+
