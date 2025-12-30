@@ -63,6 +63,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         console.log('[Auth] Initializing...');
 
+        let isInitializing = true;
+
         const initAuth = async () => {
             try {
                 // Get initial session
@@ -85,9 +87,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
 
                 console.log('[Auth] Initialization complete');
-                setLoading(false);
             } catch (error) {
                 console.error('[Auth] Init error:', error);
+            } finally {
+                isInitializing = false;
                 setLoading(false);
             }
         };
@@ -98,6 +101,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, newSession) => {
                 console.log('[Auth] State change:', event);
+
+                // Skip INITIAL_SESSION event as we handle it in initAuth
+                if (event === 'INITIAL_SESSION') {
+                    return;
+                }
+
+                // Skip if still initializing to avoid race conditions
+                if (isInitializing && event === 'SIGNED_IN') {
+                    console.log('[Auth] Skipping SIGNED_IN during init');
+                    return;
+                }
 
                 setSession(newSession);
                 setUser(newSession?.user ?? null);
