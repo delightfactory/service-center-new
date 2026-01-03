@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useReactToPrint } from 'react-to-print';
 import { supabase } from '@/lib/supabase/client';
@@ -143,10 +143,12 @@ const paymentMethodLabels: Record<string, { label: string; icon: React.ElementTy
 export function InvoiceDetailsPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState('details');
     const [showPaymentDialog, setShowPaymentDialog] = useState(false);
     const printRef = useRef<HTMLDivElement>(null);
+    const hasPrintedRef = useRef(false);
 
     // Payment form state
     const [paymentAmount, setPaymentAmount] = useState('');
@@ -184,6 +186,17 @@ export function InvoiceDetailsPage() {
         contentRef: printRef,
         documentTitle: `فاتورة-${invoice?.code || ''}`,
     });
+
+    // Auto-print if ?print=true is in URL
+    React.useEffect(() => {
+        if (searchParams.get('print') === 'true' && invoice && !isLoading && !hasPrintedRef.current) {
+            hasPrintedRef.current = true;
+            // Small delay to ensure print template is rendered
+            setTimeout(() => {
+                handlePrint();
+            }, 500);
+        }
+    }, [searchParams, invoice, isLoading, handlePrint]);
 
     // Fetch payments for this invoice
     const { data: payments } = useQuery({
@@ -661,7 +674,13 @@ export function InvoiceDetailsPage() {
                             phone: invoice.customer.phone,
                         } : undefined,
                     }}
-                    items={[]}
+                    items={(invoiceItems || []).map(item => ({
+                        description: item.description,
+                        quantity: item.quantity,
+                        unit_price: item.unit_price,
+                        discount_amount: item.discount_amount,
+                        total: item.total_price,
+                    }))}
                 />
             </div>
         </div>

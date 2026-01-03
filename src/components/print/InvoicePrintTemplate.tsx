@@ -1,8 +1,20 @@
 import React, { forwardRef } from 'react';
+import { FileText, User, Car, Package } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import {
+    PrintContainer,
+    PrintHeader,
+    PrintFooter,
+    PrintDataSection,
+    PrintDataRow,
+    PrintTable,
+    PrintTotals,
+    PrintSignature,
+    PRINT_CONFIG,
+} from './PrintDesignSystem';
 
 // ============================================================
-// Invoice Print Template - قالب طباعة الفاتورة
+// Invoice Print Template - قالب طباعة الفاتورة (محسّن)
 // ============================================================
 
 interface InvoiceItem {
@@ -32,6 +44,7 @@ interface InvoicePrintProps {
             phone?: string;
             address?: string;
             tax_number?: string;
+            code?: string;
         };
         vehicle?: {
             plate_number: string;
@@ -49,185 +62,181 @@ interface InvoicePrintProps {
     };
 }
 
+const invoiceTypeLabels: Record<string, string> = {
+    sales: 'فاتورة مبيعات',
+    purchase: 'فاتورة مشتريات',
+    sales_return: 'مرتجع مبيعات',
+    purchase_return: 'مرتجع مشتريات',
+};
+
+const invoiceTypeSubtitles: Record<string, string> = {
+    sales: 'Sales Invoice',
+    purchase: 'Purchase Invoice',
+    sales_return: 'Sales Return',
+    purchase_return: 'Purchase Return',
+};
+
 export const InvoicePrintTemplate = forwardRef<HTMLDivElement, InvoicePrintProps>(
     ({ invoice, items, companyInfo }, ref) => {
-        const invoiceTypeLabels: Record<string, string> = {
-            sales: 'فاتورة مبيعات',
-            purchase: 'فاتورة مشتريات',
-            sales_return: 'مرتجع مبيعات',
-            purchase_return: 'مرتجع مشتريات',
+        // Build totals array with proper type
+        type TotalItem = {
+            label: string;
+            value: string;
+            type?: 'normal' | 'discount' | 'total' | 'paid' | 'remaining';
         };
 
+        const totalsItems: TotalItem[] = [
+            { label: 'الإجمالي الفرعي', value: formatCurrency(invoice.subtotal) },
+        ];
+
+        if (invoice.discount_amount > 0) {
+            totalsItems.push({
+                label: 'الخصم',
+                value: `- ${formatCurrency(invoice.discount_amount)}`,
+                type: 'discount',
+            });
+        }
+
+        if (invoice.tax_amount > 0) {
+            totalsItems.push({
+                label: 'الضريبة (15%)',
+                value: formatCurrency(invoice.tax_amount),
+            });
+        }
+
+        totalsItems.push({
+            label: 'الإجمالي',
+            value: formatCurrency(invoice.total_amount),
+            type: 'total',
+        });
+
+        if (invoice.paid_amount > 0) {
+            totalsItems.push({
+                label: 'المدفوع',
+                value: formatCurrency(invoice.paid_amount),
+                type: 'paid',
+            });
+            totalsItems.push({
+                label: 'المتبقي',
+                value: formatCurrency(invoice.remaining_amount),
+                type: 'remaining',
+            });
+        }
+
         return (
-            <div
-                ref={ref}
-                className="bg-white text-black p-8 max-w-[210mm] mx-auto print:p-0 print:max-w-none"
-                style={{ fontFamily: 'Cairo, Arial, sans-serif' }}
-                dir="rtl"
-            >
+            <PrintContainer ref={ref}>
                 {/* Header */}
-                <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-gray-300">
-                    <div>
-                        {companyInfo?.logo_url && (
-                            <img
-                                src={companyInfo.logo_url}
-                                alt="Logo"
-                                className="h-16 mb-2"
-                            />
-                        )}
-                        <h1 className="text-2xl font-bold text-gray-800">
-                            {companyInfo?.name || 'مركز الصيانة'}
-                        </h1>
-                        {companyInfo?.address && (
-                            <p className="text-sm text-gray-600">{companyInfo.address}</p>
-                        )}
-                        {companyInfo?.phone && (
-                            <p className="text-sm text-gray-600">هاتف: {companyInfo.phone}</p>
-                        )}
-                        {companyInfo?.tax_number && (
-                            <p className="text-sm text-gray-600">الرقم الضريبي: {companyInfo.tax_number}</p>
-                        )}
+                <PrintHeader
+                    title={invoiceTypeLabels[invoice.invoice_type] || 'فاتورة'}
+                    subtitle={invoiceTypeSubtitles[invoice.invoice_type] || 'Invoice'}
+                    documentNumber={invoice.code}
+                    documentDate={formatDate(invoice.created_at)}
+                />
+
+                {/* Due Date Alert */}
+                {invoice.due_date && invoice.remaining_amount > 0 && (
+                    <div
+                        className="p-3 rounded-lg mb-4 text-center"
+                        style={{ backgroundColor: '#fef3c7', color: '#92400e' }}
+                    >
+                        <span className="font-bold">تاريخ الاستحقاق: </span>
+                        {formatDate(invoice.due_date)}
                     </div>
-                    <div className="text-left">
-                        <h2 className="text-xl font-bold text-primary mb-2">
-                            {invoiceTypeLabels[invoice.invoice_type] || 'فاتورة'}
-                        </h2>
-                        <p className="text-lg font-mono font-bold">{invoice.code}</p>
-                        <p className="text-sm text-gray-600">
-                            التاريخ: {formatDate(invoice.created_at)}
-                        </p>
-                        {invoice.due_date && (
-                            <p className="text-sm text-gray-600">
-                                تاريخ الاستحقاق: {formatDate(invoice.due_date)}
-                            </p>
-                        )}
-                    </div>
-                </div>
+                )}
 
                 {/* Customer & Vehicle Info */}
                 <div className="grid grid-cols-2 gap-6 mb-6">
                     {invoice.customer && (
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="font-bold text-gray-700 mb-2 border-b pb-1">بيانات العميل</h3>
-                            <p className="font-medium">{invoice.customer.name}</p>
+                        <PrintDataSection title="بيانات العميل" icon={<User size={18} />}>
+                            <PrintDataRow label="الاسم" value={invoice.customer.name} />
+                            {invoice.customer.code && (
+                                <PrintDataRow label="كود العميل" value={invoice.customer.code} />
+                            )}
                             {invoice.customer.phone && (
-                                <p className="text-sm text-gray-600">هاتف: {invoice.customer.phone}</p>
+                                <PrintDataRow label="الهاتف" value={invoice.customer.phone} />
                             )}
                             {invoice.customer.address && (
-                                <p className="text-sm text-gray-600">{invoice.customer.address}</p>
+                                <PrintDataRow label="العنوان" value={invoice.customer.address} />
                             )}
                             {invoice.customer.tax_number && (
-                                <p className="text-sm text-gray-600">
-                                    الرقم الضريبي: {invoice.customer.tax_number}
-                                </p>
+                                <PrintDataRow label="الرقم الضريبي" value={invoice.customer.tax_number} />
                             )}
-                        </div>
+                        </PrintDataSection>
                     )}
+
                     {invoice.vehicle && (
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="font-bold text-gray-700 mb-2 border-b pb-1">بيانات السيارة</h3>
-                            <p className="font-medium font-mono text-lg">{invoice.vehicle.plate_number}</p>
+                        <PrintDataSection title="بيانات السيارة" icon={<Car size={18} />} variant="highlight">
+                            <PrintDataRow
+                                label="رقم اللوحة"
+                                value={
+                                    <span className="font-mono text-lg font-bold">
+                                        {invoice.vehicle.plate_number}
+                                    </span>
+                                }
+                            />
                             {(invoice.vehicle.make || invoice.vehicle.model) && (
-                                <p className="text-sm text-gray-600">
-                                    {invoice.vehicle.make} {invoice.vehicle.model}
-                                </p>
+                                <PrintDataRow
+                                    label="النوع/الموديل"
+                                    value={`${invoice.vehicle.make || ''} ${invoice.vehicle.model || ''}`}
+                                />
                             )}
-                        </div>
+                        </PrintDataSection>
                     )}
                 </div>
 
                 {/* Items Table */}
-                <table className="w-full mb-6 border-collapse">
-                    <thead>
-                        <tr className="bg-gray-800 text-white">
-                            <th className="p-2 text-right border">#</th>
-                            <th className="p-2 text-right border">الوصف</th>
-                            <th className="p-2 text-center border w-20">الكمية</th>
-                            <th className="p-2 text-center border w-28">سعر الوحدة</th>
-                            <th className="p-2 text-center border w-24">الخصم</th>
-                            <th className="p-2 text-center border w-28">الإجمالي</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {items.map((item, index) => (
-                            <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                <td className="p-2 border text-center">{index + 1}</td>
-                                <td className="p-2 border">{item.description}</td>
-                                <td className="p-2 border text-center">{item.quantity}</td>
-                                <td className="p-2 border text-center">{formatCurrency(item.unit_price)}</td>
-                                <td className="p-2 border text-center">
-                                    {item.discount_amount > 0 ? formatCurrency(item.discount_amount) : '-'}
-                                </td>
-                                <td className="p-2 border text-center font-medium">
-                                    {formatCurrency(item.total)}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                <div className="mb-6">
+                    <h3
+                        className="font-bold text-lg mb-3 flex items-center gap-2"
+                        style={{ color: PRINT_CONFIG.primaryColor }}
+                    >
+                        <Package size={18} />
+                        البنود
+                    </h3>
+                    <PrintTable
+                        columns={[
+                            { key: 'description', label: 'الوصف', align: 'right' },
+                            { key: 'quantity', label: 'الكمية', align: 'center', width: '70px' },
+                            { key: 'unit_price', label: 'سعر الوحدة', align: 'center', width: '100px' },
+                            { key: 'discount', label: 'الخصم', align: 'center', width: '80px' },
+                            { key: 'total', label: 'الإجمالي', align: 'center', width: '100px' },
+                        ]}
+                        data={items.map(item => ({
+                            description: item.description,
+                            quantity: item.quantity,
+                            unit_price: formatCurrency(item.unit_price),
+                            discount: item.discount_amount > 0 ? formatCurrency(item.discount_amount) : '-',
+                            total: formatCurrency(item.total),
+                        }))}
+                    />
+                </div>
 
                 {/* Totals */}
-                <div className="flex justify-end">
-                    <div className="w-72 border rounded-lg overflow-hidden">
-                        <div className="flex justify-between p-2 bg-gray-50 border-b">
-                            <span>الإجمالي الفرعي:</span>
-                            <span>{formatCurrency(invoice.subtotal)}</span>
-                        </div>
-                        {invoice.discount_amount > 0 && (
-                            <div className="flex justify-between p-2 border-b text-green-600">
-                                <span>الخصم:</span>
-                                <span>- {formatCurrency(invoice.discount_amount)}</span>
-                            </div>
-                        )}
-                        {invoice.tax_amount > 0 && (
-                            <div className="flex justify-between p-2 border-b">
-                                <span>الضريبة (15%):</span>
-                                <span>{formatCurrency(invoice.tax_amount)}</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between p-3 bg-gray-800 text-white font-bold text-lg">
-                            <span>الإجمالي:</span>
-                            <span>{formatCurrency(invoice.total_amount)}</span>
-                        </div>
-                        {invoice.paid_amount > 0 && (
-                            <>
-                                <div className="flex justify-between p-2 border-b bg-green-50 text-green-700">
-                                    <span>المدفوع:</span>
-                                    <span>{formatCurrency(invoice.paid_amount)}</span>
-                                </div>
-                                <div className="flex justify-between p-2 bg-orange-50 text-orange-700 font-medium">
-                                    <span>المتبقي:</span>
-                                    <span>{formatCurrency(invoice.remaining_amount)}</span>
-                                </div>
-                            </>
-                        )}
-                    </div>
+                <div className="flex justify-end mb-6">
+                    <PrintTotals items={totalsItems} />
                 </div>
 
                 {/* Notes */}
                 {invoice.notes && (
-                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                        <h3 className="font-bold mb-2">ملاحظات:</h3>
-                        <p className="text-gray-700 whitespace-pre-wrap">{invoice.notes}</p>
+                    <div className="p-4 bg-gray-50 rounded-lg mb-6">
+                        <p className="font-bold text-gray-700 mb-1">ملاحظات:</p>
+                        <p className="text-gray-600 whitespace-pre-wrap">{invoice.notes}</p>
+                    </div>
+                )}
+
+                {/* Payment Status */}
+                {invoice.remaining_amount === 0 && invoice.paid_amount > 0 && (
+                    <div
+                        className="p-4 rounded-lg mb-6 text-center text-white font-bold text-lg"
+                        style={{ backgroundColor: '#10b981' }}
+                    >
+                        ✓ تم السداد بالكامل
                     </div>
                 )}
 
                 {/* Footer */}
-                <div className="mt-8 pt-4 border-t text-center text-sm text-gray-500">
-                    <p>شكراً لتعاملكم معنا</p>
-                    <p className="text-xs mt-2">
-                        تم الإنشاء بتاريخ: {new Date().toLocaleDateString('ar-EG')}
-                    </p>
-                </div>
-
-                {/* Print Styles */}
-                <style>{`
-                    @media print {
-                        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                        .no-print { display: none !important; }
-                    }
-                `}</style>
-            </div>
+                <PrintFooter message="شكراً لتعاملكم معنا" />
+            </PrintContainer>
         );
     }
 );

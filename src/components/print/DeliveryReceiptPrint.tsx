@@ -1,10 +1,19 @@
 import React, { forwardRef } from 'react';
+import { Car, User, FileText, Wrench, Phone, Gauge, CheckCircle2, Package } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Car, User, FileText, Wrench, Phone, Calendar, Clock, CheckCircle2 } from 'lucide-react';
+import {
+    PrintContainer,
+    PrintHeader,
+    PrintFooter,
+    PrintDataSection,
+    PrintDataRow,
+    PrintTable,
+    PrintSignature,
+    PRINT_CONFIG,
+} from './PrintDesignSystem';
 
 // ============================================================
-// Delivery Receipt Print Template - إيصال تسليم السيارة
-// Professional Print-Optimized Design
+// Delivery Receipt Print Template - إيصال تسليم السيارة (محسّن)
 // ============================================================
 
 interface DeliveryReceiptProps {
@@ -23,6 +32,7 @@ interface DeliveryReceiptProps {
     customer: {
         name: string;
         phone: string | null;
+        code?: string;
     };
     assessment?: {
         mileage_in: number | null;
@@ -38,6 +48,7 @@ interface DeliveryReceiptProps {
         description: string;
         quantity: number;
         total_price: number;
+        type?: 'service' | 'part';
     }[];
     mileage_out?: number | null;
     centerName?: string;
@@ -45,7 +56,9 @@ interface DeliveryReceiptProps {
 }
 
 export const DeliveryReceiptPrint = forwardRef<HTMLDivElement, DeliveryReceiptProps>(
-    ({ jobOrder, vehicle, customer, assessment, invoice, items, mileage_out, centerName = 'مركز صيانة السيارات', centerPhone }, ref) => {
+    ({ jobOrder, vehicle, customer, assessment, invoice, items, mileage_out }, ref) => {
+        const services = items.filter(i => i.type === 'service' || !i.type);
+        const parts = items.filter(i => i.type === 'part');
         const today = new Date().toLocaleDateString('ar-EG', {
             year: 'numeric',
             month: 'long',
@@ -53,155 +66,173 @@ export const DeliveryReceiptPrint = forwardRef<HTMLDivElement, DeliveryReceiptPr
         });
 
         return (
-            <div ref={ref} className="p-8 bg-white text-black min-h-[297mm] w-[210mm] mx-auto print:p-6" dir="rtl">
+            <PrintContainer ref={ref}>
                 {/* Header */}
-                <div className="text-center border-b-2 border-gray-800 pb-4 mb-6">
-                    <h1 className="text-3xl font-bold text-gray-900">{centerName}</h1>
-                    {centerPhone && (
-                        <p className="text-gray-600 mt-1">تليفون: {centerPhone}</p>
-                    )}
-                    <div className="mt-4 inline-block bg-gray-100 px-6 py-2 rounded-lg">
-                        <h2 className="text-xl font-bold">إيصال تسليم سيارة</h2>
-                    </div>
-                </div>
+                <PrintHeader
+                    title="إيصال تسليم سيارة"
+                    subtitle="Vehicle Delivery Receipt"
+                    documentNumber={jobOrder.code}
+                    documentDate={today}
+                />
 
-                {/* Document Info */}
-                <div className="flex justify-between mb-6 text-sm">
-                    <div className="flex items-center gap-2">
-                        <FileText size={16} />
-                        <span>رقم أمر الشغل: <strong>{jobOrder.code}</strong></span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Calendar size={16} />
-                        <span>تاريخ التسليم: <strong>{today}</strong></span>
-                    </div>
-                </div>
-
-                {/* Two Column Layout */}
+                {/* Main Info */}
                 <div className="grid grid-cols-2 gap-6 mb-6">
                     {/* Customer Info */}
-                    <div className="border rounded-lg p-4">
-                        <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-gray-800">
-                            <User size={18} />
-                            بيانات العميل
-                        </h3>
-                        <div className="space-y-2 text-sm">
-                            <p><strong>الاسم:</strong> {customer.name}</p>
-                            {customer.phone && (
-                                <p className="flex items-center gap-1">
-                                    <Phone size={14} />
-                                    <strong>الهاتف:</strong> {customer.phone}
-                                </p>
-                            )}
-                        </div>
-                    </div>
+                    <PrintDataSection title="بيانات العميل" icon={<User size={18} />}>
+                        <PrintDataRow label="الاسم" value={customer.name} />
+                        {customer.code && (
+                            <PrintDataRow label="كود العميل" value={customer.code} />
+                        )}
+                        {customer.phone && (
+                            <PrintDataRow label="الهاتف" value={customer.phone} />
+                        )}
+                    </PrintDataSection>
 
                     {/* Vehicle Info */}
-                    <div className="border rounded-lg p-4">
-                        <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-gray-800">
-                            <Car size={18} />
-                            بيانات السيارة
-                        </h3>
-                        <div className="space-y-2 text-sm">
-                            <p><strong>رقم اللوحة:</strong> {vehicle.plate_number}</p>
-                            <p><strong>النوع:</strong> {vehicle.make} {vehicle.model}</p>
-                            {vehicle.color && <p><strong>اللون:</strong> {vehicle.color}</p>}
-                        </div>
-                    </div>
+                    <PrintDataSection title="بيانات السيارة" icon={<Car size={18} />} variant="highlight">
+                        <PrintDataRow
+                            label="رقم اللوحة"
+                            value={
+                                <span className="font-mono text-lg font-bold">
+                                    {vehicle.plate_number}
+                                </span>
+                            }
+                        />
+                        <PrintDataRow
+                            label="النوع/الموديل"
+                            value={`${vehicle.make || ''} ${vehicle.model || ''}`}
+                        />
+                        {vehicle.color && (
+                            <PrintDataRow label="اللون" value={vehicle.color} />
+                        )}
+                    </PrintDataSection>
                 </div>
 
-                {/* Mileage Info */}
+                {/* Mileage Comparison */}
                 {(assessment?.mileage_in || mileage_out) && (
-                    <div className="border rounded-lg p-4 mb-6 bg-gray-50">
-                        <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-gray-800">
-                            <Clock size={18} />
-                            قراءة العداد
-                        </h3>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            {assessment?.mileage_in && (
-                                <p><strong>عند الاستلام:</strong> {assessment.mileage_in.toLocaleString()} كم</p>
-                            )}
-                            {mileage_out && (
-                                <p><strong>عند التسليم:</strong> {mileage_out.toLocaleString()} كم</p>
-                            )}
-                        </div>
+                    <div className="grid grid-cols-2 gap-6 mb-6">
+                        {assessment?.mileage_in && (
+                            <div
+                                className="rounded-lg p-4 text-center"
+                                style={{ backgroundColor: '#f3f4f6' }}
+                            >
+                                <div className="flex items-center justify-center gap-2 mb-2">
+                                    <Gauge size={18} className="text-gray-500" />
+                                    <span className="text-gray-600">عند الاستلام</span>
+                                </div>
+                                <p className="text-2xl font-bold text-gray-700">
+                                    {assessment.mileage_in.toLocaleString()} كم
+                                </p>
+                            </div>
+                        )}
+                        {mileage_out && (
+                            <div
+                                className="rounded-lg p-4 text-center"
+                                style={{ backgroundColor: `${PRINT_CONFIG.primaryColor}10` }}
+                            >
+                                <div className="flex items-center justify-center gap-2 mb-2">
+                                    <Gauge size={18} style={{ color: PRINT_CONFIG.primaryColor }} />
+                                    <span className="text-gray-600">عند التسليم</span>
+                                </div>
+                                <p
+                                    className="text-2xl font-bold"
+                                    style={{ color: PRINT_CONFIG.primaryColor }}
+                                >
+                                    {mileage_out.toLocaleString()} كم
+                                </p>
+                            </div>
+                        )}
                     </div>
                 )}
 
-                {/* Services Performed */}
-                <div className="border rounded-lg p-4 mb-6">
-                    <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-gray-800">
-                        <Wrench size={18} />
-                        الأعمال المنفذة
-                    </h3>
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b">
-                                <th className="text-right py-2 font-bold">#</th>
-                                <th className="text-right py-2 font-bold">البند</th>
-                                <th className="text-center py-2 font-bold">الكمية</th>
-                                <th className="text-left py-2 font-bold">المبلغ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {items.map((item, index) => (
-                                <tr key={index} className="border-b border-gray-200">
-                                    <td className="py-2">{index + 1}</td>
-                                    <td className="py-2">{item.description}</td>
-                                    <td className="py-2 text-center">{item.quantity}</td>
-                                    <td className="py-2 text-left">{formatCurrency(item.total_price)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                {/* Work Performed */}
+                {items.length > 0 && (
+                    <div className="mb-6">
+                        <h3
+                            className="font-bold text-lg mb-3 flex items-center gap-2"
+                            style={{ color: PRINT_CONFIG.primaryColor }}
+                        >
+                            <Wrench size={18} />
+                            الأعمال المنفذة
+                        </h3>
+                        <PrintTable
+                            columns={[
+                                { key: 'description', label: 'البند', align: 'right' },
+                                { key: 'quantity', label: 'الكمية', align: 'center', width: '80px' },
+                                { key: 'total', label: 'المبلغ', align: 'center', width: '100px' },
+                            ]}
+                            data={items.map(item => ({
+                                description: item.description,
+                                quantity: item.quantity,
+                                total: formatCurrency(item.total_price),
+                            }))}
+                        />
+                    </div>
+                )}
 
                 {/* Invoice Summary */}
                 {invoice && (
-                    <div className="border-2 border-gray-800 rounded-lg p-4 mb-6 bg-gray-50">
-                        <div className="flex justify-between items-center">
+                    <div
+                        className="p-4 rounded-lg mb-6 border-2"
+                        style={{ borderColor: PRINT_CONFIG.primaryColor }}
+                    >
+                        <div className="grid grid-cols-4 gap-4 text-center">
                             <div>
-                                <p className="text-sm text-gray-600">رقم الفاتورة: {invoice.code}</p>
+                                <p className="text-xs text-gray-500 mb-1">رقم الفاتورة</p>
+                                <p className="font-bold font-mono">{invoice.code}</p>
                             </div>
-                            <div className="text-left">
-                                <p className="text-sm">الإجمالي: <strong>{formatCurrency(invoice.total_amount)}</strong></p>
-                                <p className="text-sm">المدفوع: <strong className="text-green-700">{formatCurrency(invoice.paid_amount)}</strong></p>
-                                {invoice.total_amount - invoice.paid_amount > 0 && (
-                                    <p className="text-sm">المتبقي: <strong className="text-red-700">{formatCurrency(invoice.total_amount - invoice.paid_amount)}</strong></p>
-                                )}
+                            <div>
+                                <p className="text-xs text-gray-500 mb-1">الإجمالي</p>
+                                <p className="font-bold">{formatCurrency(invoice.total_amount)}</p>
+                            </div>
+                            <div className="bg-green-50 rounded p-1">
+                                <p className="text-xs text-green-600 mb-1">المدفوع</p>
+                                <p className="font-bold text-green-700">{formatCurrency(invoice.paid_amount)}</p>
+                            </div>
+                            <div className={invoice.total_amount - invoice.paid_amount > 0 ? 'bg-orange-50 rounded p-1' : 'bg-green-50 rounded p-1'}>
+                                <p className={`text-xs mb-1 ${invoice.total_amount - invoice.paid_amount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                                    المتبقي
+                                </p>
+                                <p className={`font-bold ${invoice.total_amount - invoice.paid_amount > 0 ? 'text-orange-700' : 'text-green-700'}`}>
+                                    {formatCurrency(invoice.total_amount - invoice.paid_amount)}
+                                </p>
                             </div>
                         </div>
                     </div>
                 )}
 
                 {/* Confirmation */}
-                <div className="border rounded-lg p-4 mb-8 bg-green-50 border-green-200">
-                    <div className="flex items-center gap-2 text-green-800">
-                        <CheckCircle2 size={20} />
-                        <p className="font-bold">تم استلام السيارة بحالة جيدة وإتمام جميع الأعمال المطلوبة</p>
+                <div
+                    className="p-4 rounded-lg mb-6 text-center"
+                    style={{ backgroundColor: '#dcfce7' }}
+                >
+                    <div className="flex items-center justify-center gap-2 text-green-800">
+                        <CheckCircle2 size={24} />
+                        <p className="font-bold text-lg">تم تسليم السيارة بحالة جيدة وإتمام جميع الأعمال المطلوبة</p>
                     </div>
+                </div>
+
+                {/* Customer Acknowledgment */}
+                <div className="p-4 bg-gray-100 rounded-lg mb-6 text-sm">
+                    <p className="font-bold mb-2">إقرار الاستلام:</p>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600">
+                        <li>أقر باستلام السيارة الموصوفة أعلاه بحالة جيدة</li>
+                        <li>تم الاطلاع على جميع الأعمال المنفذة والموافقة عليها</li>
+                        <li>الضمان يسري حسب سياسة المركز المعلنة</li>
+                    </ul>
                 </div>
 
                 {/* Signatures */}
-                <div className="grid grid-cols-2 gap-8 mt-12 pt-8 border-t">
-                    <div className="text-center">
-                        <p className="font-bold mb-12">توقيع المستلم (العميل)</p>
-                        <div className="border-b border-gray-400 w-48 mx-auto"></div>
-                        <p className="text-sm text-gray-600 mt-2">{customer.name}</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="font-bold mb-12">توقيع المسؤول</p>
-                        <div className="border-b border-gray-400 w-48 mx-auto"></div>
-                        <p className="text-sm text-gray-600 mt-2">مسؤول الاستلام</p>
-                    </div>
-                </div>
+                <PrintSignature
+                    signatures={[
+                        { title: 'توقيع المستلم (العميل)', name: customer.name },
+                        { title: 'مسؤول التسليم' },
+                    ]}
+                />
 
                 {/* Footer */}
-                <div className="mt-12 pt-4 border-t text-center text-xs text-gray-500">
-                    <p>شكراً لثقتكم في خدماتنا • نتمنى لكم قيادة آمنة</p>
-                    <p className="mt-1">تم الطباعة: {new Date().toLocaleString('ar-EG')}</p>
-                </div>
-            </div>
+                <PrintFooter message="نتمنى لكم قيادة آمنة • شكراً لثقتكم في خدماتنا" />
+            </PrintContainer>
         );
     }
 );

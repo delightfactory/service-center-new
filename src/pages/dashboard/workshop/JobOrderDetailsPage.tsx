@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useReactToPrint } from 'react-to-print';
 import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Car } from 'lucide-react';
+import { AlertCircle, Car, Printer } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { JobOrderPrint } from '@/components/print';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -63,6 +65,9 @@ export function JobOrderDetailsPage() {
     const [instructionsText, setInstructionsText] = useState('');
     const [editingItem, setEditingItem] = useState<JobItem | null>(null);
     const [editingTask, setEditingTask] = useState<JobTask | null>(null);
+
+    // Print ref
+    const printRef = useRef<HTMLDivElement>(null);
 
     // ============================================================
     // Data Fetching
@@ -291,6 +296,12 @@ export function JobOrderDetailsPage() {
         navigate(`/dashboard/finance/invoices/new?job_order_id=${id}`);
     };
 
+    // Print handler
+    const handlePrint = useReactToPrint({
+        contentRef: printRef,
+        documentTitle: `أمر-شغل-${jobOrder?.code || ''}`,
+    });
+
     // ============================================================
     // Loading & Error States
     // ============================================================
@@ -339,20 +350,32 @@ export function JobOrderDetailsPage() {
             <PageHeader title="" showBreadcrumbs={true} className="pb-0" />
 
             {/* Header */}
-            <JobOrderHeader
-                code={jobOrder.code}
-                status={jobOrder.status}
-                priority={jobOrder.priority}
-                jobCategory={jobOrder.job_category}
-                createdAt={jobOrder.created_at}
-                linkedInvoice={linkedInvoice}
-                assignedTechs={assignedTechs}
-                hasItems={!!jobItems && jobItems.length > 0}
-                onRefresh={refetch}
-                onAssignTech={() => setShowAssignTechModal(true)}
-                onCreateInvoice={handleCreateInvoice}
-                onStatusChange={handleStatusChange}
-            />
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <JobOrderHeader
+                    code={jobOrder.code}
+                    status={jobOrder.status}
+                    priority={jobOrder.priority}
+                    jobCategory={jobOrder.job_category}
+                    createdAt={jobOrder.created_at}
+                    linkedInvoice={linkedInvoice}
+                    assignedTechs={assignedTechs}
+                    hasItems={!!jobItems && jobItems.length > 0}
+                    onRefresh={refetch}
+                    onAssignTech={() => setShowAssignTechModal(true)}
+                    onCreateInvoice={handleCreateInvoice}
+                    onStatusChange={handleStatusChange}
+                />
+
+                {/* Print Button */}
+                <Button
+                    variant="outline"
+                    onClick={() => handlePrint()}
+                    className="gap-2"
+                >
+                    <Printer size={16} />
+                    طباعة أمر الشغل
+                </Button>
+            </div>
 
             {/* Status Bar */}
             <div className="bg-card border rounded-xl p-4">
@@ -568,6 +591,52 @@ export function JobOrderDetailsPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Hidden Print Template */}
+            <div style={{ display: 'none' }}>
+                <JobOrderPrint
+                    ref={printRef}
+                    jobOrder={{
+                        code: jobOrder.code,
+                        status: jobOrder.status,
+                        job_category: jobOrder.job_category,
+                        priority: jobOrder.priority,
+                        created_at: jobOrder.created_at,
+                        started_at: jobOrder.started_at || undefined,
+                        completed_at: jobOrder.completed_at || undefined,
+                        notes: jobOrder.notes || undefined,
+                        manager_instructions: jobOrder.manager_instructions || undefined,
+                    }}
+                    customer={jobOrder.customer ? {
+                        name: jobOrder.customer.name,
+                        phone: jobOrder.customer.phone || undefined,
+                    } : undefined}
+                    vehicle={jobOrder.vehicle ? {
+                        plate_number: jobOrder.vehicle.plate_number,
+                        make: jobOrder.vehicle.make || undefined,
+                        model: jobOrder.vehicle.model || undefined,
+                        year: jobOrder.vehicle.year || undefined,
+                        color: jobOrder.vehicle.color || undefined,
+                        vin: jobOrder.vehicle.vin || undefined,
+                    } : undefined}
+                    assessment={jobOrder.assessment ? {
+                        mileage_in: jobOrder.assessment.mileage_in || undefined,
+                        fuel_level: jobOrder.assessment.fuel_level || undefined,
+                        customer_complaint: jobOrder.assessment.customer_complaint || undefined,
+                    } : undefined}
+                    items={(jobItems || []).map(item => ({
+                        description: item.description,
+                        quantity: item.quantity,
+                        unit_price: item.unit_price,
+                        total: item.total_price,
+                        type: item.item_type === 'labor' || item.item_type === 'external' ? 'service' : 'part',
+                    }))}
+                    assignedTechs={(assignedTechs || []).map(t => ({
+                        name: t.technician?.full_name || '',
+                        is_lead: t.is_lead,
+                    }))}
+                />
+            </div>
         </div>
     );
 }

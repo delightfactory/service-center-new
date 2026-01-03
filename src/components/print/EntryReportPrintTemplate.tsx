@@ -1,8 +1,18 @@
 import React, { forwardRef } from 'react';
+import { ClipboardCheck, User, Car, Gauge, Fuel, AlertCircle, CheckCircle } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import {
+    PrintContainer,
+    PrintHeader,
+    PrintFooter,
+    PrintDataSection,
+    PrintDataRow,
+    PrintSignature,
+    PRINT_CONFIG,
+} from './PrintDesignSystem';
 
 // ============================================================
-// Entry Report Print Template - قالب طباعة تقرير الدخول
+// Entry Report Print Template - قالب طباعة تقرير الدخول (محسّن)
 // ============================================================
 
 interface EntryReportPrintProps {
@@ -18,6 +28,7 @@ interface EntryReportPrintProps {
         customer?: {
             name: string;
             phone?: string;
+            code?: string;
         };
         vehicle?: {
             plate_number: string;
@@ -43,128 +54,161 @@ interface EntryReportPrintProps {
     };
 }
 
+const entryTypeLabels: Record<string, string> = {
+    full_car: 'دخول سيارة كاملة',
+    control_unit: 'صيانة كنترول',
+    quick_check: 'كشف سريع',
+};
+
+const entryTypeSubtitles: Record<string, string> = {
+    full_car: 'Full Vehicle Entry',
+    control_unit: 'Control Unit Service',
+    quick_check: 'Quick Check',
+};
+
+const statusLabels: Record<string, { icon: string; label: string }> = {
+    ok: { icon: '✓', label: 'جيد' },
+    warning: { icon: '⚠', label: 'تحذير' },
+    critical: { icon: '✗', label: 'حرج' },
+    not_checked: { icon: '-', label: 'لم يفحص' },
+};
+
+const statusColors: Record<string, string> = {
+    ok: 'text-green-600 bg-green-50',
+    warning: 'text-yellow-600 bg-yellow-50',
+    critical: 'text-red-600 bg-red-50',
+    not_checked: 'text-gray-400 bg-gray-50',
+};
+
 export const EntryReportPrintTemplate = forwardRef<HTMLDivElement, EntryReportPrintProps>(
     ({ assessment, checklist, companyInfo }, ref) => {
-        const entryTypeLabels: Record<string, string> = {
-            full_car: 'دخول سيارة كاملة',
-            control_unit: 'صيانة كنترول',
-            quick_check: 'كشف سريع',
-        };
-
-        const statusLabels: Record<string, string> = {
-            ok: '✓',
-            warning: '⚠',
-            critical: '✗',
-            not_checked: '-',
-        };
-
-        const statusColors: Record<string, string> = {
-            ok: 'text-green-600',
-            warning: 'text-yellow-600',
-            critical: 'text-red-600',
-            not_checked: 'text-gray-400',
-        };
-
         return (
-            <div
-                ref={ref}
-                className="bg-white text-black p-8 max-w-[210mm] mx-auto print:p-0 print:max-w-none"
-                style={{ fontFamily: 'Cairo, Arial, sans-serif' }}
-                dir="rtl"
-            >
+            <PrintContainer ref={ref}>
                 {/* Header */}
-                <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-gray-300">
-                    <div>
-                        {companyInfo?.logo_url && (
-                            <img
-                                src={companyInfo.logo_url}
-                                alt="Logo"
-                                className="h-16 mb-2"
-                            />
-                        )}
-                        <h1 className="text-2xl font-bold text-gray-800">
-                            {companyInfo?.name || 'مركز الصيانة'}
-                        </h1>
-                        {companyInfo?.address && (
-                            <p className="text-sm text-gray-600">{companyInfo.address}</p>
-                        )}
-                        {companyInfo?.phone && (
-                            <p className="text-sm text-gray-600">هاتف: {companyInfo.phone}</p>
-                        )}
-                    </div>
-                    <div className="text-left">
-                        <h2 className="text-xl font-bold text-primary mb-2">
-                            تقرير الدخول
-                        </h2>
-                        <p className="text-lg font-mono font-bold">{assessment.code}</p>
-                        <p className="text-sm text-gray-600">
-                            {entryTypeLabels[assessment.entry_type] || assessment.entry_type}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                            التاريخ: {formatDate(assessment.created_at)}
-                        </p>
-                    </div>
+                <PrintHeader
+                    title="تقرير الاستقبال"
+                    subtitle={entryTypeSubtitles[assessment.entry_type] || 'Entry Report'}
+                    documentNumber={assessment.code}
+                    documentDate={formatDate(assessment.created_at)}
+                />
+
+                {/* Entry Type Badge */}
+                <div
+                    className="text-center p-2 rounded-lg mb-6"
+                    style={{ backgroundColor: `${PRINT_CONFIG.primaryColor}15` }}
+                >
+                    <span className="font-bold" style={{ color: PRINT_CONFIG.primaryColor }}>
+                        نوع الدخول: {entryTypeLabels[assessment.entry_type] || assessment.entry_type}
+                    </span>
                 </div>
 
-                {/* Customer & Vehicle Side by Side */}
+                {/* Customer & Vehicle Info */}
                 <div className="grid grid-cols-2 gap-6 mb-6">
-                    {/* Customer Info */}
                     {assessment.customer && (
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="font-bold text-gray-700 mb-2 border-b pb-1">بيانات العميل</h3>
-                            <p className="font-medium text-lg">{assessment.customer.name}</p>
-                            {assessment.customer.phone && (
-                                <p className="text-gray-600">هاتف: {assessment.customer.phone}</p>
+                        <PrintDataSection title="بيانات العميل" icon={<User size={18} />}>
+                            <PrintDataRow label="الاسم" value={assessment.customer.name} />
+                            {assessment.customer.code && (
+                                <PrintDataRow label="كود العميل" value={assessment.customer.code} />
                             )}
-                        </div>
+                            {assessment.customer.phone && (
+                                <PrintDataRow label="الهاتف" value={assessment.customer.phone} />
+                            )}
+                        </PrintDataSection>
                     )}
 
-                    {/* Vehicle Info */}
                     {assessment.vehicle && (
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="font-bold text-gray-700 mb-2 border-b pb-1">بيانات السيارة</h3>
-                            <p className="font-medium font-mono text-xl mb-1">{assessment.vehicle.plate_number}</p>
-                            <p className="text-gray-600">
-                                {assessment.vehicle.make} {assessment.vehicle.model} {assessment.vehicle.year}
-                            </p>
+                        <PrintDataSection title="بيانات السيارة" icon={<Car size={18} />} variant="highlight">
+                            <PrintDataRow
+                                label="رقم اللوحة"
+                                value={
+                                    <span className="font-mono text-lg font-bold">
+                                        {assessment.vehicle.plate_number}
+                                    </span>
+                                }
+                            />
+                            <PrintDataRow
+                                label="النوع/الموديل"
+                                value={`${assessment.vehicle.make || ''} ${assessment.vehicle.model || ''} ${assessment.vehicle.year || ''}`}
+                            />
                             {assessment.vehicle.color && (
-                                <p className="text-gray-600">اللون: {assessment.vehicle.color}</p>
+                                <PrintDataRow label="اللون" value={assessment.vehicle.color} />
                             )}
                             {assessment.vehicle.vin && (
-                                <p className="text-xs text-gray-500 font-mono">VIN: {assessment.vehicle.vin}</p>
+                                <PrintDataRow
+                                    label="رقم الشاسيه"
+                                    value={<span className="font-mono text-xs">{assessment.vehicle.vin}</span>}
+                                />
                             )}
-                        </div>
+                        </PrintDataSection>
                     )}
                 </div>
 
-                {/* Vehicle Status */}
+                {/* Vehicle Status Meters */}
                 <div className="grid grid-cols-2 gap-6 mb-6">
                     {assessment.mileage_in && (
-                        <div className="border rounded-lg p-3 text-center">
-                            <span className="text-gray-600">عداد الكيلومتر</span>
-                            <p className="text-2xl font-bold">{assessment.mileage_in.toLocaleString('ar-EG')} كم</p>
+                        <div
+                            className="rounded-lg p-4 text-center"
+                            style={{ backgroundColor: `${PRINT_CONFIG.primaryColor}10` }}
+                        >
+                            <div className="flex items-center justify-center gap-2 mb-2">
+                                <Gauge size={20} style={{ color: PRINT_CONFIG.primaryColor }} />
+                                <span className="text-gray-600">قراءة العداد</span>
+                            </div>
+                            <p
+                                className="text-3xl font-bold"
+                                style={{ color: PRINT_CONFIG.primaryColor }}
+                            >
+                                {assessment.mileage_in.toLocaleString('ar-EG')}
+                                <span className="text-lg mr-1">كم</span>
+                            </p>
                         </div>
                     )}
                     {assessment.fuel_level !== undefined && (
-                        <div className="border rounded-lg p-3 text-center">
-                            <span className="text-gray-600">مستوى الوقود</span>
-                            <p className="text-2xl font-bold">{assessment.fuel_level}%</p>
+                        <div
+                            className="rounded-lg p-4 text-center"
+                            style={{ backgroundColor: `${PRINT_CONFIG.accentColor}15` }}
+                        >
+                            <div className="flex items-center justify-center gap-2 mb-2">
+                                <Fuel size={20} style={{ color: PRINT_CONFIG.accentColor }} />
+                                <span className="text-gray-600">مستوى الوقود</span>
+                            </div>
+                            <p
+                                className="text-3xl font-bold"
+                                style={{ color: PRINT_CONFIG.accentColor }}
+                            >
+                                {assessment.fuel_level}%
+                            </p>
+                            <div className="mt-2 h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full rounded-full"
+                                    style={{
+                                        width: `${assessment.fuel_level}%`,
+                                        backgroundColor: PRINT_CONFIG.accentColor
+                                    }}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>
 
                 {/* Customer Complaint */}
                 {assessment.customer_complaint && (
-                    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <h3 className="font-bold text-yellow-800 mb-2">شكوى العميل:</h3>
+                    <div className="mb-6 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
+                        <h3 className="font-bold text-yellow-800 mb-2 flex items-center gap-2">
+                            <AlertCircle size={18} />
+                            شكوى العميل
+                        </h3>
                         <p className="text-gray-700 whitespace-pre-wrap">{assessment.customer_complaint}</p>
                     </div>
                 )}
 
                 {/* Diagnosis Notes */}
                 {assessment.diagnosis_notes && (
-                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h3 className="font-bold text-blue-800 mb-2">ملاحظات الفحص:</h3>
+                    <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                        <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2">
+                            <ClipboardCheck size={18} />
+                            ملاحظات الفحص المبدئي
+                        </h3>
                         <p className="text-gray-700 whitespace-pre-wrap">{assessment.diagnosis_notes}</p>
                     </div>
                 )}
@@ -172,18 +216,29 @@ export const EntryReportPrintTemplate = forwardRef<HTMLDivElement, EntryReportPr
                 {/* Checklist */}
                 {checklist && checklist.length > 0 && (
                     <div className="mb-6">
-                        <h3 className="font-bold text-gray-700 mb-3">قائمة الفحص:</h3>
+                        <h3
+                            className="font-bold text-lg mb-3 flex items-center gap-2"
+                            style={{ color: PRINT_CONFIG.primaryColor }}
+                        >
+                            <CheckCircle size={18} />
+                            قائمة فحص الاستلام
+                        </h3>
                         <div className="grid grid-cols-2 gap-4">
                             {checklist.map((cat, idx) => (
-                                <div key={idx} className="border rounded-lg p-3">
-                                    <h4 className="font-medium mb-2 border-b pb-1">{cat.category}</h4>
+                                <div key={idx} className="border rounded-lg overflow-hidden">
+                                    <h4
+                                        className="font-medium p-2 text-white"
+                                        style={{ backgroundColor: PRINT_CONFIG.primaryColor }}
+                                    >
+                                        {cat.category}
+                                    </h4>
                                     <table className="w-full text-sm">
                                         <tbody>
                                             {cat.items.map((item, i) => (
-                                                <tr key={i}>
-                                                    <td className="py-1">{item.name}</td>
-                                                    <td className={`py-1 text-center font-bold ${statusColors[item.status]}`}>
-                                                        {statusLabels[item.status]}
+                                                <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                    <td className="p-2">{item.name}</td>
+                                                    <td className={`p-2 text-center w-16 font-bold ${statusColors[item.status]}`}>
+                                                        {statusLabels[item.status].icon}
                                                     </td>
                                                 </tr>
                                             ))}
@@ -192,32 +247,45 @@ export const EntryReportPrintTemplate = forwardRef<HTMLDivElement, EntryReportPr
                                 </div>
                             ))}
                         </div>
+
+                        {/* Legend */}
+                        <div className="mt-3 flex gap-4 justify-center text-sm">
+                            <span className="flex items-center gap-1">
+                                <span className="text-green-600 font-bold">✓</span> جيد
+                            </span>
+                            <span className="flex items-center gap-1">
+                                <span className="text-yellow-600 font-bold">⚠</span> تحذير
+                            </span>
+                            <span className="flex items-center gap-1">
+                                <span className="text-red-600 font-bold">✗</span> يحتاج إصلاح
+                            </span>
+                            <span className="flex items-center gap-1">
+                                <span className="text-gray-400 font-bold">-</span> لم يفحص
+                            </span>
+                        </div>
                     </div>
                 )}
 
-                {/* Signatures */}
-                <div className="mt-8 grid grid-cols-2 gap-8">
-                    <div className="border-t-2 pt-4 text-center">
-                        <p className="mb-8">توقيع المستلم</p>
-                        <p className="font-medium">{assessment.received_by?.full_name || '____________'}</p>
-                    </div>
-                    <div className="border-t-2 pt-4 text-center">
-                        <p className="mb-8">توقيع العميل</p>
-                        <p>____________</p>
-                    </div>
+                {/* Terms */}
+                <div className="p-4 bg-gray-100 rounded-lg mb-6 text-sm">
+                    <p className="font-bold mb-2">إقرار الاستلام:</p>
+                    <p className="text-gray-600">
+                        أقر أنا الموقع أدناه بتسليم السيارة الموصوفة أعلاه للمركز لإجراء الفحص والصيانة اللازمة،
+                        وأعلم أن المركز غير مسؤول عن أي محتويات شخصية داخل السيارة.
+                    </p>
                 </div>
+
+                {/* Signatures */}
+                <PrintSignature
+                    signatures={[
+                        { title: 'مسؤول الاستقبال', name: assessment.received_by?.full_name },
+                        { title: 'توقيع العميل', name: assessment.customer?.name },
+                    ]}
+                />
 
                 {/* Footer */}
-                <div className="mt-8 pt-4 border-t text-center text-sm text-gray-500">
-                    <p>شكراً لثقتكم بنا</p>
-                </div>
-
-                <style>{`
-                    @media print {
-                        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    }
-                `}</style>
-            </div>
+                <PrintFooter message="شكراً لثقتكم بمركز أبو زياد" />
+            </PrintContainer>
         );
     }
 );

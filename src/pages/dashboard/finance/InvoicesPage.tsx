@@ -487,14 +487,14 @@ export function InvoicesPage() {
                                                             </button>
                                                         )}
 
-                                                        {/* Print button */}
-                                                        <button
-                                                            onClick={() => window.print()}
+                                                        {/* Print button - navigate to details page for printing */}
+                                                        <Link
+                                                            to={`/dashboard/finance/invoices/${invoice.id}?print=true`}
                                                             className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-gray-50 hover:bg-gray-100 text-gray-500 transition-colors"
                                                             title="طباعة"
                                                         >
                                                             <Printer size={15} />
-                                                        </button>
+                                                        </Link>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
