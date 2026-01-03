@@ -9,4 +9,6 @@ export { InventoryPage } from './InventoryPage';
 export { WarehouseTransfersPage } from './WarehouseTransfersPage';
 export { WarehousesPage } from './WarehousesPage';
 export { StockMovementsPage } from './StockMovementsPage';
+export { default as StockAuditPage } from './StockAuditPage';
+
 

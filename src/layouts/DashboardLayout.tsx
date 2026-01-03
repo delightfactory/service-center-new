@@ -19,6 +19,8 @@ import {
     X,
     Building2,
     Car,
+    BarChart3,
+    ClipboardCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -45,6 +47,11 @@ const navigation: NavItem[] = [
         title: 'الرئيسية',
         href: '/dashboard',
         icon: LayoutDashboard,
+    },
+    {
+        title: 'التقارير',
+        href: '/dashboard/reports',
+        icon: BarChart3,
     },
     {
         title: 'الاستقبال',
@@ -93,6 +100,7 @@ const navigation: NavItem[] = [
             { title: 'الأرصدة', href: '/dashboard/inventory/stock' },
             { title: 'التحويلات', href: '/dashboard/inventory/transfers' },
             { title: 'الحركات', href: '/dashboard/inventory/movements' },
+            { title: 'الجرد والتسويات', href: '/dashboard/inventory/audit' },
         ],
     },
     {
