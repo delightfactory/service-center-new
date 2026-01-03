@@ -315,16 +315,18 @@ export function VehicleDetailsPage() {
             <Card>
                 <CardContent className="p-0">
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="w-full justify-start rounded-none border-b p-0 h-auto">
-                            <TabsTrigger value="info" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
-                                <Car size={16} className="ml-2" />
-                                البيانات
-                            </TabsTrigger>
-                            <TabsTrigger value="history" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
-                                <Wrench size={16} className="ml-2" />
-                                سجل الصيانة ({jobOrders?.length || 0})
-                            </TabsTrigger>
-                        </TabsList>
+                        <div className="overflow-x-auto">
+                            <TabsList className="w-full min-w-max justify-start rounded-none border-b p-0 h-auto">
+                                <TabsTrigger value="info" className="rounded-none px-4 py-3 data-[state=active]:border-b-2 data-[state=active]:border-primary">
+                                    <Car size={16} className="ml-2" />
+                                    البيانات
+                                </TabsTrigger>
+                                <TabsTrigger value="history" className="rounded-none px-4 py-3 data-[state=active]:border-b-2 data-[state=active]:border-primary">
+                                    <Wrench size={16} className="ml-2" />
+                                    سجل الصيانة ({jobOrders?.length || 0})
+                                </TabsTrigger>
+                            </TabsList>
+                        </div>
 
                         {/* Info Tab */}
                         <TabsContent value="info" className="p-6">
@@ -401,35 +403,37 @@ export function VehicleDetailsPage() {
                                     لا توجد سجلات صيانة
                                 </div>
                             ) : (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>الكود</TableHead>
-                                            <TableHead>الحالة</TableHead>
-                                            <TableHead>التاريخ</TableHead>
-                                            <TableHead>ملاحظات</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {jobOrders.map(job => (
-                                            <TableRow key={job.id} className="cursor-pointer hover:bg-muted/50"
-                                                onClick={() => navigate(`/dashboard/workshop/${job.id}`)}>
-                                                <TableCell className="font-mono">{job.code}</TableCell>
-                                                <TableCell>
-                                                    <Badge className={statusColors[job.status] || 'bg-gray-100'}>
-                                                        {statusLabels[job.status] || job.status}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground text-sm">
-                                                    {formatDate(job.created_at)}
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground text-sm truncate max-w-[200px]">
-                                                    {job.notes || '-'}
-                                                </TableCell>
+                                <div className="overflow-x-auto">
+                                    <Table className="min-w-[500px]">
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>الكود</TableHead>
+                                                <TableHead>الحالة</TableHead>
+                                                <TableHead>التاريخ</TableHead>
+                                                <TableHead>ملاحظات</TableHead>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {jobOrders.map(job => (
+                                                <TableRow key={job.id} className="cursor-pointer hover:bg-muted/50"
+                                                    onClick={() => navigate(`/dashboard/workshop/${job.id}`)}>
+                                                    <TableCell className="font-mono">{job.code}</TableCell>
+                                                    <TableCell>
+                                                        <Badge className={statusColors[job.status] || 'bg-gray-100'}>
+                                                            {statusLabels[job.status] || job.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-muted-foreground text-sm">
+                                                        {formatDate(job.created_at)}
+                                                    </TableCell>
+                                                    <TableCell className="text-muted-foreground text-sm truncate max-w-[200px]">
+                                                        {job.notes || '-'}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             )}
                         </TabsContent>
                     </Tabs>
@@ -444,7 +448,7 @@ export function VehicleDetailsPage() {
                         <DialogDescription>تحديث معلومات المركبة</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 max-h-[60vh] overflow-y-auto py-2">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>رقم اللوحة *</Label>
                                 <Input
@@ -463,7 +467,7 @@ export function VehicleDetailsPage() {
                                 />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>الماركة *</Label>
                                 <Input
@@ -481,7 +485,7 @@ export function VehicleDetailsPage() {
                                 />
                             </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <Label>السنة</Label>
                                 <Input

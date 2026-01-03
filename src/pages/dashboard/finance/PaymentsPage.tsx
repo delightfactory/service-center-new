@@ -466,8 +466,8 @@ export function PaymentsPage() {
                                     description="لم يتم العثور على سندات مطابقة للبحث"
                                 />
                             ) : (
-                                <div className="border rounded-lg overflow-hidden">
-                                    <Table>
+                                <div className="border rounded-lg overflow-x-auto">
+                                    <Table className="min-w-[700px]">
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>الكود</TableHead>

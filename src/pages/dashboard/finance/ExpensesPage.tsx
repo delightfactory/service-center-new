@@ -513,7 +513,7 @@ export function ExpensesPage() {
                         <DialogDescription>أدخل بيانات المصروف</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>المبلغ *</Label>
                                 <Input
@@ -546,7 +546,7 @@ export function ExpensesPage() {
                                 required
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>التصنيف</Label>
                                 <Select value={categoryId} onValueChange={setCategoryId}>

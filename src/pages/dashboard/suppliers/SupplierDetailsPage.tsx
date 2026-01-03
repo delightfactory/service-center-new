@@ -309,20 +309,22 @@ export function SupplierDetailsPage() {
             <Card>
                 <CardContent className="p-0">
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="w-full justify-start rounded-none border-b p-0 h-auto">
-                            <TabsTrigger value="info" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
-                                <Truck size={16} className="ml-2" />
-                                البيانات
-                            </TabsTrigger>
-                            <TabsTrigger value="invoices" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
-                                <FileText size={16} className="ml-2" />
-                                فواتير الشراء
-                            </TabsTrigger>
-                            <TabsTrigger value="payments" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
-                                <Receipt size={16} className="ml-2" />
-                                المدفوعات
-                            </TabsTrigger>
-                        </TabsList>
+                        <div className="overflow-x-auto">
+                            <TabsList className="w-full min-w-max justify-start rounded-none border-b p-0 h-auto">
+                                <TabsTrigger value="info" className="rounded-none px-4 py-3 data-[state=active]:border-b-2 data-[state=active]:border-primary">
+                                    <Truck size={16} className="ml-2" />
+                                    البيانات
+                                </TabsTrigger>
+                                <TabsTrigger value="invoices" className="rounded-none px-4 py-3 data-[state=active]:border-b-2 data-[state=active]:border-primary">
+                                    <FileText size={16} className="ml-2" />
+                                    فواتير الشراء
+                                </TabsTrigger>
+                                <TabsTrigger value="payments" className="rounded-none px-4 py-3 data-[state=active]:border-b-2 data-[state=active]:border-primary">
+                                    <Receipt size={16} className="ml-2" />
+                                    المدفوعات
+                                </TabsTrigger>
+                            </TabsList>
+                        </div>
 
                         {/* Info Tab */}
                         <TabsContent value="info" className="p-6">
@@ -402,39 +404,41 @@ export function SupplierDetailsPage() {
                                     لا توجد فواتير شراء
                                 </div>
                             ) : (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>الكود</TableHead>
-                                            <TableHead>الإجمالي</TableHead>
-                                            <TableHead>المدفوع</TableHead>
-                                            <TableHead>المتبقي</TableHead>
-                                            <TableHead>الحالة</TableHead>
-                                            <TableHead>التاريخ</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {invoices.map(invoice => (
-                                            <TableRow key={invoice.id} className="cursor-pointer hover:bg-muted/50"
-                                                onClick={() => navigate(`/dashboard/finance/invoices/${invoice.id}`)}>
-                                                <TableCell className="font-mono">{invoice.code}</TableCell>
-                                                <TableCell>{formatCurrency(invoice.total_amount)}</TableCell>
-                                                <TableCell className="text-green-600">{formatCurrency(invoice.paid_amount)}</TableCell>
-                                                <TableCell className={invoice.remaining_amount > 0 ? "text-red-600 font-medium" : ""}>
-                                                    {formatCurrency(invoice.remaining_amount)}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge className={statusColors[invoice.status] || 'bg-gray-100'}>
-                                                        {statusLabels[invoice.status] || invoice.status}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground text-sm">
-                                                    {formatDate(invoice.created_at)}
-                                                </TableCell>
+                                <div className="overflow-x-auto">
+                                    <Table className="min-w-[600px]">
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>الكود</TableHead>
+                                                <TableHead>الإجمالي</TableHead>
+                                                <TableHead>المدفوع</TableHead>
+                                                <TableHead>المتبقي</TableHead>
+                                                <TableHead>الحالة</TableHead>
+                                                <TableHead>التاريخ</TableHead>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {invoices.map(invoice => (
+                                                <TableRow key={invoice.id} className="cursor-pointer hover:bg-muted/50"
+                                                    onClick={() => navigate(`/dashboard/finance/invoices/${invoice.id}`)}>
+                                                    <TableCell className="font-mono">{invoice.code}</TableCell>
+                                                    <TableCell>{formatCurrency(invoice.total_amount)}</TableCell>
+                                                    <TableCell className="text-green-600">{formatCurrency(invoice.paid_amount)}</TableCell>
+                                                    <TableCell className={invoice.remaining_amount > 0 ? "text-red-600 font-medium" : ""}>
+                                                        {formatCurrency(invoice.remaining_amount)}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge className={statusColors[invoice.status] || 'bg-gray-100'}>
+                                                            {statusLabels[invoice.status] || invoice.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-muted-foreground text-sm">
+                                                        {formatDate(invoice.created_at)}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             )}
                         </TabsContent>
 
@@ -445,32 +449,34 @@ export function SupplierDetailsPage() {
                                     لا توجد مدفوعات
                                 </div>
                             ) : (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>الكود</TableHead>
-                                            <TableHead>النوع</TableHead>
-                                            <TableHead>الطريقة</TableHead>
-                                            <TableHead>المبلغ</TableHead>
-                                            <TableHead>التاريخ</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {payments.map(payment => (
-                                            <TableRow key={payment.id}>
-                                                <TableCell className="font-mono">{payment.code}</TableCell>
-                                                <TableCell>{payment.payment_type}</TableCell>
-                                                <TableCell>{payment.payment_method}</TableCell>
-                                                <TableCell className="font-medium text-red-600">
-                                                    {formatCurrency(payment.amount)}
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground text-sm">
-                                                    {formatDate(payment.payment_date)}
-                                                </TableCell>
+                                <div className="overflow-x-auto">
+                                    <Table className="min-w-[500px]">
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>الكود</TableHead>
+                                                <TableHead>النوع</TableHead>
+                                                <TableHead>الطريقة</TableHead>
+                                                <TableHead>المبلغ</TableHead>
+                                                <TableHead>التاريخ</TableHead>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {payments.map(payment => (
+                                                <TableRow key={payment.id}>
+                                                    <TableCell className="font-mono">{payment.code}</TableCell>
+                                                    <TableCell>{payment.payment_type}</TableCell>
+                                                    <TableCell>{payment.payment_method}</TableCell>
+                                                    <TableCell className="font-medium text-red-600">
+                                                        {formatCurrency(payment.amount)}
+                                                    </TableCell>
+                                                    <TableCell className="text-muted-foreground text-sm">
+                                                        {formatDate(payment.payment_date)}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             )}
                         </TabsContent>
                     </Tabs>
@@ -493,7 +499,7 @@ export function SupplierDetailsPage() {
                                 placeholder="اسم المورد"
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>الهاتف</Label>
                                 <Input

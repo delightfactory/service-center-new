@@ -133,14 +133,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Sign in with email/password
     const signIn = async (email: string, password: string) => {
         try {
-            setLoading(true);
+            // Note: We don't set global loading here because:
+            // 1. LoginPage has its own loading state for the button
+            // 2. Setting loading=true here causes DashboardLayout to show spinner forever
             const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
 
             if (error) {
-                setLoading(false);
                 return { error, profile: null };
             }
 
@@ -157,10 +158,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setProfile(userProfile);
             }
 
-            setLoading(false);
             return { error: null, profile: userProfile };
         } catch (error) {
-            setLoading(false);
             return { error: error as Error, profile: null };
         }
     };

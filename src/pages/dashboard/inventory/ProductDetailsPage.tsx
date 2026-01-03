@@ -463,12 +463,14 @@ export function ProductDetailsPage() {
 
             {/* Tabs */}
             <Tabs defaultValue="details" className="print:hidden">
-                <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="details">التفاصيل</TabsTrigger>
-                    {product.is_trackable && <TabsTrigger value="stock">المخزون</TabsTrigger>}
-                    {product.is_trackable && <TabsTrigger value="transactions">الحركات</TabsTrigger>}
-                    {product.is_composite && <TabsTrigger value="components">المكونات</TabsTrigger>}
-                </TabsList>
+                <div className="overflow-x-auto">
+                    <TabsList className="grid w-full min-w-max grid-cols-4">
+                        <TabsTrigger value="details">التفاصيل</TabsTrigger>
+                        {product.is_trackable && <TabsTrigger value="stock">المخزون</TabsTrigger>}
+                        {product.is_trackable && <TabsTrigger value="transactions">الحركات</TabsTrigger>}
+                        {product.is_composite && <TabsTrigger value="components">المكونات</TabsTrigger>}
+                    </TabsList>
+                </div>
 
                 {/* Details Tab */}
                 <TabsContent value="details" className="mt-4">
@@ -547,38 +549,40 @@ export function ProductDetailsPage() {
                                         <p>لا يوجد رصيد في أي مخزن</p>
                                     </div>
                                 ) : (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>المخزن</TableHead>
-                                                <TableHead>الرصيد</TableHead>
-                                                <TableHead>المحجوز</TableHead>
-                                                <TableHead>المتاح</TableHead>
-                                                <TableHead>متوسط التكلفة</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {inventoryItems.map(item => (
-                                                <TableRow key={item.id}>
-                                                    <TableCell className="font-medium">
-                                                        <div className="flex items-center gap-2">
-                                                            <Warehouse size={16} className="text-muted-foreground" />
-                                                            {item.warehouse?.name}
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>{item.quantity}</TableCell>
-                                                    <TableCell className="text-amber-600">{item.reserved_quantity}</TableCell>
-                                                    <TableCell className={cn(
-                                                        "font-medium",
-                                                        item.available_quantity < product.min_stock ? "text-red-600" : "text-green-600"
-                                                    )}>
-                                                        {item.available_quantity}
-                                                    </TableCell>
-                                                    <TableCell>{formatCurrency(item.avg_cost)}</TableCell>
+                                    <div className="overflow-x-auto">
+                                        <Table className="min-w-[500px]">
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>المخزن</TableHead>
+                                                    <TableHead>الرصيد</TableHead>
+                                                    <TableHead>المحجوز</TableHead>
+                                                    <TableHead>المتاح</TableHead>
+                                                    <TableHead>متوسط التكلفة</TableHead>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {inventoryItems.map(item => (
+                                                    <TableRow key={item.id}>
+                                                        <TableCell className="font-medium">
+                                                            <div className="flex items-center gap-2">
+                                                                <Warehouse size={16} className="text-muted-foreground" />
+                                                                {item.warehouse?.name}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>{item.quantity}</TableCell>
+                                                        <TableCell className="text-amber-600">{item.reserved_quantity}</TableCell>
+                                                        <TableCell className={cn(
+                                                            "font-medium",
+                                                            item.available_quantity < product.min_stock ? "text-red-600" : "text-green-600"
+                                                        )}>
+                                                            {item.available_quantity}
+                                                        </TableCell>
+                                                        <TableCell>{formatCurrency(item.avg_cost)}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
                                 )}
                             </CardContent>
                         </Card>
@@ -602,40 +606,42 @@ export function ProductDetailsPage() {
                                         <p>لا توجد حركات</p>
                                     </div>
                                 ) : (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>الكود</TableHead>
-                                                <TableHead>النوع</TableHead>
-                                                <TableHead>المخزن</TableHead>
-                                                <TableHead>الكمية</TableHead>
-                                                <TableHead>الرصيد بعد</TableHead>
-                                                <TableHead>التاريخ</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {transactions.map(tx => {
-                                                const txConfig = transactionTypeLabels[tx.transaction_type] || { label: tx.transaction_type, color: 'text-gray-600' };
-                                                const isNegative = ['sale', 'job_consumption', 'transfer_out', 'damage'].includes(tx.transaction_type);
-                                                return (
-                                                    <TableRow key={tx.id}>
-                                                        <TableCell className="font-mono text-sm">{tx.code}</TableCell>
-                                                        <TableCell>
-                                                            <span className={txConfig.color}>{txConfig.label}</span>
-                                                        </TableCell>
-                                                        <TableCell>{tx.warehouse?.name}</TableCell>
-                                                        <TableCell className={isNegative ? 'text-red-600' : 'text-green-600'}>
-                                                            {isNegative ? '-' : '+'}{Math.abs(tx.quantity)}
-                                                        </TableCell>
-                                                        <TableCell>{tx.balance_after ?? '-'}</TableCell>
-                                                        <TableCell className="text-muted-foreground text-sm">
-                                                            {formatDate(tx.created_at)}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                );
-                                            })}
-                                        </TableBody>
-                                    </Table>
+                                    <div className="overflow-x-auto">
+                                        <Table className="min-w-[600px]">
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>الكود</TableHead>
+                                                    <TableHead>النوع</TableHead>
+                                                    <TableHead>المخزن</TableHead>
+                                                    <TableHead>الكمية</TableHead>
+                                                    <TableHead>الرصيد بعد</TableHead>
+                                                    <TableHead>التاريخ</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {transactions.map(tx => {
+                                                    const txConfig = transactionTypeLabels[tx.transaction_type] || { label: tx.transaction_type, color: 'text-gray-600' };
+                                                    const isNegative = ['sale', 'job_consumption', 'transfer_out', 'damage'].includes(tx.transaction_type);
+                                                    return (
+                                                        <TableRow key={tx.id}>
+                                                            <TableCell className="font-mono text-sm">{tx.code}</TableCell>
+                                                            <TableCell>
+                                                                <span className={txConfig.color}>{txConfig.label}</span>
+                                                            </TableCell>
+                                                            <TableCell>{tx.warehouse?.name}</TableCell>
+                                                            <TableCell className={isNegative ? 'text-red-600' : 'text-green-600'}>
+                                                                {isNegative ? '-' : '+'}{Math.abs(tx.quantity)}
+                                                            </TableCell>
+                                                            <TableCell>{tx.balance_after ?? '-'}</TableCell>
+                                                            <TableCell className="text-muted-foreground text-sm">
+                                                                {formatDate(tx.created_at)}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
                                 )}
                             </CardContent>
                         </Card>
@@ -663,46 +669,48 @@ export function ProductDetailsPage() {
                                         <p>لا توجد مكونات</p>
                                     </div>
                                 ) : (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>الكود</TableHead>
-                                                <TableHead>المكون</TableHead>
-                                                <TableHead>النوع</TableHead>
-                                                <TableHead>الكمية</TableHead>
-                                                <TableHead>السعر</TableHead>
-                                                <TableHead>اختياري</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {serviceComponents.map(sc => (
-                                                <TableRow key={sc.id}>
-                                                    <TableCell className="font-mono text-sm">
-                                                        {sc.component?.code}
-                                                    </TableCell>
-                                                    <TableCell className="font-medium">
-                                                        {sc.component?.name}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge variant="outline">
-                                                            {productTypeConfig[sc.component?.product_type]?.label}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {sc.quantity} {sc.component?.unit}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {formatCurrency(sc.component?.selling_price * sc.quantity)}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={sc.is_optional ? "secondary" : "default"}>
-                                                            {sc.is_optional ? 'اختياري' : 'أساسي'}
-                                                        </Badge>
-                                                    </TableCell>
+                                    <div className="overflow-x-auto">
+                                        <Table className="min-w-[600px]">
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>الكود</TableHead>
+                                                    <TableHead>المكون</TableHead>
+                                                    <TableHead>النوع</TableHead>
+                                                    <TableHead>الكمية</TableHead>
+                                                    <TableHead>السعر</TableHead>
+                                                    <TableHead>اختياري</TableHead>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {serviceComponents.map(sc => (
+                                                    <TableRow key={sc.id}>
+                                                        <TableCell className="font-mono text-sm">
+                                                            {sc.component?.code}
+                                                        </TableCell>
+                                                        <TableCell className="font-medium">
+                                                            {sc.component?.name}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="outline">
+                                                                {productTypeConfig[sc.component?.product_type]?.label}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {sc.quantity} {sc.component?.unit}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {formatCurrency(sc.component?.selling_price * sc.quantity)}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={sc.is_optional ? "secondary" : "default"}>
+                                                                {sc.is_optional ? 'اختياري' : 'أساسي'}
+                                                            </Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
                                 )}
                             </CardContent>
                         </Card>

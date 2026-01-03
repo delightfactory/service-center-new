@@ -368,11 +368,13 @@ export function JobOrderDetailsPage() {
                 {/* Main Area */}
                 <div className="lg:col-span-2 space-y-4">
                     <Tabs defaultValue="tasks" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3">
-                            <TabsTrigger value="tasks">المهام</TabsTrigger>
-                            <TabsTrigger value="items">البنود</TabsTrigger>
-                            <TabsTrigger value="details">التفاصيل</TabsTrigger>
-                        </TabsList>
+                        <div className="overflow-x-auto">
+                            <TabsList className="grid w-full min-w-max grid-cols-3">
+                                <TabsTrigger value="tasks">المهام</TabsTrigger>
+                                <TabsTrigger value="items">البنود</TabsTrigger>
+                                <TabsTrigger value="details">التفاصيل</TabsTrigger>
+                            </TabsList>
+                        </div>
                         <TabsContent value="tasks" className="mt-4">
                             <JobTasksSection
                                 tasks={jobTasks || []}

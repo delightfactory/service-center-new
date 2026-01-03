@@ -387,16 +387,18 @@ export function InvoiceDetailsPage() {
             <Card>
                 <CardContent className="p-0">
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="w-full justify-start rounded-none border-b p-0 h-auto">
-                            <TabsTrigger value="details" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
-                                <FileText size={16} className="ml-2" />
-                                التفاصيل
-                            </TabsTrigger>
-                            <TabsTrigger value="payments" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
-                                <Receipt size={16} className="ml-2" />
-                                المدفوعات ({payments?.length || 0})
-                            </TabsTrigger>
-                        </TabsList>
+                        <div className="overflow-x-auto">
+                            <TabsList className="w-full min-w-max justify-start rounded-none border-b p-0 h-auto">
+                                <TabsTrigger value="details" className="rounded-none px-4 py-3 data-[state=active]:border-b-2 data-[state=active]:border-primary">
+                                    <FileText size={16} className="ml-2" />
+                                    التفاصيل
+                                </TabsTrigger>
+                                <TabsTrigger value="payments" className="rounded-none px-4 py-3 data-[state=active]:border-b-2 data-[state=active]:border-primary">
+                                    <Receipt size={16} className="ml-2" />
+                                    المدفوعات ({payments?.length || 0})
+                                </TabsTrigger>
+                            </TabsList>
+                        </div>
 
                         {/* Details Tab */}
                         <TabsContent value="details" className="p-6">
@@ -435,8 +437,8 @@ export function InvoiceDetailsPage() {
                                 <div className="space-y-4">
                                     {/* Invoice Items Table */}
                                     {invoiceItems && invoiceItems.length > 0 && (
-                                        <div className="border rounded-lg overflow-hidden">
-                                            <Table>
+                                        <div className="border rounded-lg overflow-x-auto">
+                                            <Table className="min-w-[500px]">
                                                 <TableHeader>
                                                     <TableRow className="bg-muted/50">
                                                         <TableHead className="text-right">البند</TableHead>
@@ -510,45 +512,47 @@ export function InvoiceDetailsPage() {
                                     )}
                                 </div>
                             ) : (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>الكود</TableHead>
-                                            <TableHead>الطريقة</TableHead>
-                                            <TableHead>المبلغ</TableHead>
-                                            <TableHead>الخزينة</TableHead>
-                                            <TableHead>التاريخ</TableHead>
-                                            <TableHead>ملاحظات</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {payments.map(payment => {
-                                            const methodInfo = paymentMethodLabels[payment.payment_method];
-                                            const MethodIcon = methodInfo?.icon || Receipt;
-                                            return (
-                                                <TableRow key={payment.id}>
-                                                    <TableCell className="font-mono">{payment.code}</TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center gap-1">
-                                                            <MethodIcon size={14} />
-                                                            {methodInfo?.label || payment.payment_method}
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="font-bold text-green-600">
-                                                        {formatCurrency(payment.amount)}
-                                                    </TableCell>
-                                                    <TableCell>{payment.treasury?.name || '-'}</TableCell>
-                                                    <TableCell className="text-muted-foreground text-sm">
-                                                        {formatDate(payment.payment_date)}
-                                                    </TableCell>
-                                                    <TableCell className="text-muted-foreground text-sm">
-                                                        {payment.notes || '-'}
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })}
-                                    </TableBody>
-                                </Table>
+                                <div className="overflow-x-auto">
+                                    <Table className="min-w-[600px]">
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>الكود</TableHead>
+                                                <TableHead>الطريقة</TableHead>
+                                                <TableHead>المبلغ</TableHead>
+                                                <TableHead>الخزينة</TableHead>
+                                                <TableHead>التاريخ</TableHead>
+                                                <TableHead>ملاحظات</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {payments.map(payment => {
+                                                const methodInfo = paymentMethodLabels[payment.payment_method];
+                                                const MethodIcon = methodInfo?.icon || Receipt;
+                                                return (
+                                                    <TableRow key={payment.id}>
+                                                        <TableCell className="font-mono">{payment.code}</TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-1">
+                                                                <MethodIcon size={14} />
+                                                                {methodInfo?.label || payment.payment_method}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="font-bold text-green-600">
+                                                            {formatCurrency(payment.amount)}
+                                                        </TableCell>
+                                                        <TableCell>{payment.treasury?.name || '-'}</TableCell>
+                                                        <TableCell className="text-muted-foreground text-sm">
+                                                            {formatDate(payment.payment_date)}
+                                                        </TableCell>
+                                                        <TableCell className="text-muted-foreground text-sm">
+                                                            {payment.notes || '-'}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             )}
                         </TabsContent>
                     </Tabs>
