@@ -1,13 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     ClipboardCheck, Package, Warehouse, Search, AlertTriangle,
-    Plus, Minus, Save, X, FileSpreadsheet, Loader2
+    Plus, Minus, Save, X, Loader2, Check, PlayCircle, StopCircle
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { inventoryService } from '@/lib/services';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,15 +26,18 @@ import {
     DialogHeader,
     DialogTitle,
     DialogFooter,
+    DialogDescription,
 } from '@/components/ui/dialog';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared';
 import { cn } from '@/lib/utils';
@@ -63,34 +66,35 @@ interface StockItem {
     };
 }
 
-interface AdjustmentItem {
+interface AuditEntry {
     id: string;
     product_id: string;
+    warehouse_id: string;
+    system_quantity: number;
+    actual_quantity: number | null;
+    difference: number;
     product_name: string;
     product_code: string;
-    warehouse_id: string;
-    warehouse_name: string;
-    current_quantity: number;
-    new_quantity: number;
-    difference: number;
     unit: string;
 }
 
 // ============================================================
-// Stock Audit Page - صفحة جرد وتسويات المخزون
+// Stock Audit Page - صفحة جرد المخزون
 // ============================================================
 export default function StockAuditPage() {
     const { user } = useAuth();
     const queryClient = useQueryClient();
 
     // State
-    const [selectedWarehouse, setSelectedWarehouse] = useState<string>('all');
+    const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState('');
-    const [adjustments, setAdjustments] = useState<AdjustmentItem[]>([]);
-    const [adjustmentReason, setAdjustmentReason] = useState('');
-    const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
-    const [newQuantity, setNewQuantity] = useState<string>('');
+    const [isAuditMode, setIsAuditMode] = useState(false);
+    const [auditEntries, setAuditEntries] = useState<Map<string, AuditEntry>>(new Map());
+    const [auditReason, setAuditReason] = useState('');
+    const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitProgress, setSubmitProgress] = useState({ current: 0, total: 0 });
 
     // Fetch warehouses
     const { data: warehouses = [] } = useQuery({
@@ -106,32 +110,54 @@ export default function StockAuditPage() {
         },
     });
 
-    // Fetch inventory items
+    // Fetch all products with their stock in selected warehouse
     const { data: stockItems = [], isLoading } = useQuery({
         queryKey: ['stock-audit', selectedWarehouse],
         queryFn: async () => {
-            let query = supabase
+            if (!selectedWarehouse) return [];
+
+            // Get all physical products (exclude services)
+            const { data: products, error: productsError } = await supabase
+                .from('products')
+                .select('id, code, name, product_type, unit, min_stock')
+                .eq('is_active', true)
+                .neq('product_type', 'service')
+                .order('name');
+
+            if (productsError) throw productsError;
+
+            // Get inventory for selected warehouse
+            const { data: inventory, error: inventoryError } = await supabase
                 .from('inventory_items')
-                .select(`
-                    id, product_id, warehouse_id, quantity, reserved_quantity, avg_cost,
-                    product:products!inner(id, code, name, product_type, unit, min_stock),
-                    warehouse:warehouses!inner(id, name)
-                `)
-                .gt('quantity', 0);
+                .select('product_id, quantity, reserved_quantity, avg_cost')
+                .eq('warehouse_id', selectedWarehouse);
 
-            if (selectedWarehouse !== 'all') {
-                query = query.eq('warehouse_id', selectedWarehouse);
-            }
+            if (inventoryError) throw inventoryError;
 
-            const { data, error } = await query.order('product(name)');
-            if (error) throw error;
-            // Transform the data to match StockItem type
-            return ((data || []) as any[]).map(item => ({
-                ...item,
-                product: Array.isArray(item.product) ? item.product[0] : item.product,
-                warehouse: Array.isArray(item.warehouse) ? item.warehouse[0] : item.warehouse,
-            })) as StockItem[];
+            // Get warehouse info
+            const warehouse = warehouses.find(w => w.id === selectedWarehouse);
+
+            // Map inventory by product_id
+            const inventoryMap = new Map(
+                (inventory || []).map(i => [i.product_id, i])
+            );
+
+            // Combine products with their inventory
+            return (products || []).map(product => {
+                const inv = inventoryMap.get(product.id);
+                return {
+                    id: `${product.id}-${selectedWarehouse}`,
+                    product_id: product.id,
+                    warehouse_id: selectedWarehouse,
+                    quantity: inv?.quantity || 0,
+                    reserved_quantity: inv?.reserved_quantity || 0,
+                    avg_cost: inv?.avg_cost || 0,
+                    product: product,
+                    warehouse: warehouse || { id: selectedWarehouse, name: '' },
+                } as StockItem;
+            });
         },
+        enabled: !!selectedWarehouse && warehouses.length > 0,
     });
 
     // Filter items based on search
@@ -144,439 +170,564 @@ export default function StockAuditPage() {
         );
     }, [stockItems, searchTerm]);
 
-    // Mutation for adjustment
-    const adjustmentMutation = useMutation({
-        mutationFn: async (item: AdjustmentItem) => {
-            return inventoryService.recordAdjustment(
-                item.product_id,
-                item.warehouse_id,
-                item.new_quantity,
-                adjustmentReason || 'تسوية جرد',
-                user?.id
-            );
-        },
-        onSuccess: () => {
+    // Start audit session
+    const startAudit = useCallback(() => {
+        if (!selectedWarehouse) {
+            toast.error('يرجى اختيار المخزن أولاً');
+            return;
+        }
+
+        // Initialize audit entries with current quantities
+        const entries = new Map<string, AuditEntry>();
+        stockItems.forEach(item => {
+            entries.set(item.id, {
+                id: item.id,
+                product_id: item.product_id,
+                warehouse_id: item.warehouse_id,
+                system_quantity: item.quantity,
+                actual_quantity: null, // User hasn't entered yet
+                difference: 0,
+                product_name: item.product.name,
+                product_code: item.product.code,
+                unit: item.product.unit,
+            });
+        });
+
+        setAuditEntries(entries);
+        setIsAuditMode(true);
+        setAuditReason(`جرد مخزن ${warehouses.find(w => w.id === selectedWarehouse)?.name} - ${new Date().toLocaleDateString('ar-EG')}`);
+        toast.success('تم بدء جلسة الجرد');
+    }, [selectedWarehouse, stockItems, warehouses]);
+
+    // Cancel audit
+    const cancelAudit = useCallback(() => {
+        setIsAuditMode(false);
+        setAuditEntries(new Map());
+        setAuditReason('');
+        setIsCancelDialogOpen(false);
+        toast.info('تم إلغاء جلسة الجرد');
+    }, []);
+
+    // Update actual quantity
+    const updateActualQuantity = useCallback((itemId: string, value: string) => {
+        const numValue = value === '' ? null : parseFloat(value);
+
+        setAuditEntries(prev => {
+            const newEntries = new Map(prev);
+            const entry = newEntries.get(itemId);
+            if (entry) {
+                const actualQty = numValue;
+                newEntries.set(itemId, {
+                    ...entry,
+                    actual_quantity: actualQty,
+                    difference: actualQty !== null ? actualQty - entry.system_quantity : 0,
+                });
+            }
+            return newEntries;
+        });
+    }, []);
+
+    // Get entries with changes
+    const entriesWithChanges = useMemo(() => {
+        return Array.from(auditEntries.values()).filter(
+            entry => entry.actual_quantity !== null && entry.difference !== 0
+        );
+    }, [auditEntries]);
+
+    // Get entries that were audited (even if no change)
+    const auditedEntries = useMemo(() => {
+        return Array.from(auditEntries.values()).filter(
+            entry => entry.actual_quantity !== null
+        );
+    }, [auditEntries]);
+
+    // Submit audit
+    const handleSubmitAudit = async () => {
+        if (entriesWithChanges.length === 0) {
+            toast.info('لا توجد تغييرات للتنفيذ');
+            setIsSubmitDialogOpen(false);
+            setIsAuditMode(false);
+            setAuditEntries(new Map());
+            return;
+        }
+
+        if (!auditReason.trim()) {
+            toast.error('يرجى إدخال سبب الجرد');
+            return;
+        }
+
+        setIsSubmitting(true);
+        setSubmitProgress({ current: 0, total: entriesWithChanges.length });
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (let i = 0; i < entriesWithChanges.length; i++) {
+            const entry = entriesWithChanges[i];
+            setSubmitProgress({ current: i + 1, total: entriesWithChanges.length });
+
+            try {
+                await inventoryService.recordAdjustment(
+                    entry.product_id,
+                    entry.warehouse_id,
+                    entry.actual_quantity!,
+                    auditReason,
+                    user?.id
+                );
+                successCount++;
+            } catch (error) {
+                console.error(`Error adjusting ${entry.product_name}:`, error);
+                errorCount++;
+            }
+        }
+
+        setIsSubmitting(false);
+        setIsSubmitDialogOpen(false);
+
+        if (successCount > 0) {
             queryClient.invalidateQueries({ queryKey: ['stock-audit'] });
             queryClient.invalidateQueries({ queryKey: ['inventory'] });
-        },
-    });
-
-    // Handle adding item to adjustment list
-    const handleAddAdjustment = () => {
-        if (!selectedItem || !newQuantity) return;
-
-        const qty = parseFloat(newQuantity);
-        if (isNaN(qty) || qty < 0) {
-            toast.error('الكمية غير صالحة');
-            return;
+            toast.success(`تم تنفيذ ${successCount} تسوية بنجاح`);
         }
 
-        if (qty === selectedItem.quantity) {
-            toast.error('الكمية الجديدة مساوية للكمية الحالية');
-            return;
+        if (errorCount > 0) {
+            toast.error(`فشلت ${errorCount} تسوية`);
         }
 
-        // Check if already in list
-        if (adjustments.find(a => a.id === selectedItem.id)) {
-            toast.error('هذا المنتج موجود بالفعل في قائمة التسويات');
-            return;
-        }
-
-        setAdjustments(prev => [...prev, {
-            id: selectedItem.id,
-            product_id: selectedItem.product_id,
-            product_name: selectedItem.product.name,
-            product_code: selectedItem.product.code,
-            warehouse_id: selectedItem.warehouse_id,
-            warehouse_name: selectedItem.warehouse.name,
-            current_quantity: selectedItem.quantity,
-            new_quantity: qty,
-            difference: qty - selectedItem.quantity,
-            unit: selectedItem.product.unit,
-        }]);
-
-        setIsAdjustDialogOpen(false);
-        setSelectedItem(null);
-        setNewQuantity('');
-        toast.success('تمت إضافة المنتج إلى قائمة التسويات');
-    };
-
-    // Handle removing item from adjustment list
-    const handleRemoveAdjustment = (id: string) => {
-        setAdjustments(prev => prev.filter(a => a.id !== id));
-    };
-
-    // Handle submitting all adjustments
-    const handleSubmitAdjustments = async () => {
-        if (adjustments.length === 0) {
-            toast.error('لا توجد تسويات للتنفيذ');
-            return;
-        }
-
-        if (!adjustmentReason.trim()) {
-            toast.error('يرجى إدخال سبب التسوية');
-            return;
-        }
-
-        try {
-            for (const item of adjustments) {
-                await adjustmentMutation.mutateAsync(item);
-            }
-            toast.success(`تم تنفيذ ${adjustments.length} تسوية بنجاح`);
-            setAdjustments([]);
-            setAdjustmentReason('');
-        } catch (error) {
-            toast.error('حدث خطأ أثناء تنفيذ التسويات');
-            console.error(error);
-        }
+        // End audit session
+        setIsAuditMode(false);
+        setAuditEntries(new Map());
+        setAuditReason('');
     };
 
     // Stats
     const stats = useMemo(() => {
-        const lowStock = stockItems.filter(
-            item => item.quantity - item.reserved_quantity < item.product.min_stock && item.product.min_stock > 0
-        ).length;
-        const totalValue = stockItems.reduce(
-            (sum, item) => sum + (item.quantity * item.avg_cost), 0
-        );
-        return { lowStock, totalValue, totalItems: stockItems.length };
-    }, [stockItems]);
+        const increases = entriesWithChanges.filter(e => e.difference > 0).length;
+        const decreases = entriesWithChanges.filter(e => e.difference < 0).length;
+        const totalItems = stockItems.length;
+        const auditedCount = auditedEntries.length;
+        const progressPercent = totalItems > 0 ? Math.round((auditedCount / totalItems) * 100) : 0;
+
+        return { increases, decreases, totalItems, auditedCount, progressPercent, changesCount: entriesWithChanges.length };
+    }, [stockItems, entriesWithChanges, auditedEntries]);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
             <PageHeader
-                title="جرد وتسويات المخزون"
-                description="مراجعة وتعديل كميات المخزون الفعلية"
+                title="جرد المخزون"
+                description={isAuditMode ? "أدخل الكميات الفعلية لكل صنف" : "اختر المخزن وابدأ جلسة جرد جديدة"}
             />
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-muted-foreground">إجمالي الأصناف</p>
-                                <p className="text-2xl font-bold">{stats.totalItems}</p>
-                            </div>
-                            <Package className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-muted-foreground">قيمة المخزون</p>
-                                <p className="text-2xl font-bold">{stats.totalValue.toLocaleString('ar-EG')} ج.م</p>
-                            </div>
-                            <FileSpreadsheet className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className={cn(stats.lowStock > 0 && "border-warning")}>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-muted-foreground">نقص في المخزون</p>
-                                <p className="text-2xl font-bold text-warning">{stats.lowStock}</p>
-                            </div>
-                            <AlertTriangle className="h-8 w-8 text-warning" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className={cn(adjustments.length > 0 && "border-primary")}>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-muted-foreground">تسويات معلقة</p>
-                                <p className="text-2xl font-bold text-primary">{adjustments.length}</p>
-                            </div>
-                            <ClipboardCheck className="h-8 w-8 text-primary" />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Pending Adjustments */}
-            {adjustments.length > 0 && (
-                <Card className="border-primary">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <ClipboardCheck className="h-5 w-5" />
-                            التسويات المعلقة ({adjustments.length})
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="rounded-lg border overflow-hidden">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>المنتج</TableHead>
-                                        <TableHead>المخزن</TableHead>
-                                        <TableHead className="text-center">الكمية الحالية</TableHead>
-                                        <TableHead className="text-center">الكمية الجديدة</TableHead>
-                                        <TableHead className="text-center">الفرق</TableHead>
-                                        <TableHead></TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {adjustments.map(item => (
-                                        <TableRow key={item.id}>
-                                            <TableCell>
-                                                <div>
-                                                    <p className="font-medium">{item.product_name}</p>
-                                                    <p className="text-xs text-muted-foreground">{item.product_code}</p>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>{item.warehouse_name}</TableCell>
-                                            <TableCell className="text-center">{item.current_quantity} {item.unit}</TableCell>
-                                            <TableCell className="text-center font-medium">{item.new_quantity} {item.unit}</TableCell>
-                                            <TableCell className="text-center">
-                                                <Badge variant={item.difference > 0 ? 'default' : 'destructive'}>
-                                                    {item.difference > 0 ? '+' : ''}{item.difference}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleRemoveAdjustment(item.id)}
-                                                >
-                                                    <X className="h-4 w-4 text-destructive" />
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row gap-4 items-end">
-                            <div className="flex-1 space-y-2">
-                                <Label>سبب التسوية *</Label>
-                                <Textarea
-                                    value={adjustmentReason}
-                                    onChange={e => setAdjustmentReason(e.target.value)}
-                                    placeholder="مثال: جرد دوري شهر يناير 2026"
-                                    rows={2}
-                                />
-                            </div>
-                            <Button
-                                onClick={handleSubmitAdjustments}
-                                disabled={adjustmentMutation.isPending || !adjustmentReason.trim()}
-                                className="gap-2"
+            {/* Control Bar */}
+            <Card>
+                <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                            {/* Warehouse Selection */}
+                            <Select
+                                value={selectedWarehouse}
+                                onValueChange={setSelectedWarehouse}
+                                disabled={isAuditMode}
                             >
-                                {adjustmentMutation.isPending ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Save className="h-4 w-4" />
+                                <SelectTrigger className="w-full sm:w-[200px]">
+                                    <Warehouse className="h-4 w-4 ml-2" />
+                                    <SelectValue placeholder="اختر المخزن" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {warehouses.map(w => (
+                                        <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            {/* Search - Only in audit mode */}
+                            {isAuditMode && (
+                                <div className="relative flex-1 sm:w-[250px]">
+                                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="بحث بالاسم أو الكود..."
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                        className="pr-10"
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            {!isAuditMode ? (
+                                <Button
+                                    onClick={startAudit}
+                                    disabled={!selectedWarehouse || isLoading}
+                                    className="flex-1 sm:flex-none gap-2"
+                                >
+                                    <PlayCircle className="h-4 w-4" />
+                                    بدء جلسة جرد
+                                </Button>
+                            ) : (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setIsCancelDialogOpen(true)}
+                                        className="flex-1 sm:flex-none gap-2"
+                                    >
+                                        <StopCircle className="h-4 w-4" />
+                                        إلغاء
+                                    </Button>
+                                    <Button
+                                        onClick={() => setIsSubmitDialogOpen(true)}
+                                        disabled={entriesWithChanges.length === 0}
+                                        className="flex-1 sm:flex-none gap-2"
+                                    >
+                                        <Save className="h-4 w-4" />
+                                        حفظ الجرد ({entriesWithChanges.length})
+                                    </Button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Audit Progress - Only in audit mode */}
+            {isAuditMode && (
+                <Card className="border-primary bg-primary/5">
+                    <CardContent className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <ClipboardCheck className="h-5 w-5 text-primary" />
+                                    <span className="font-semibold">جلسة جرد نشطة</span>
+                                    <Badge variant="outline">{stats.progressPercent}%</Badge>
+                                </div>
+                                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-primary transition-all duration-300"
+                                        style={{ width: `${stats.progressPercent}%` }}
+                                    />
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-2">
+                                    تم جرد {stats.auditedCount} من {stats.totalItems} صنف
+                                </p>
+                            </div>
+
+                            <div className="flex gap-3">
+                                {stats.increases > 0 && (
+                                    <Badge variant="outline" className="text-green-600 border-green-600 gap-1">
+                                        <Plus className="h-3 w-3" />
+                                        {stats.increases} زيادة
+                                    </Badge>
                                 )}
-                                تنفيذ التسويات
-                            </Button>
+                                {stats.decreases > 0 && (
+                                    <Badge variant="outline" className="text-red-600 border-red-600 gap-1">
+                                        <Minus className="h-3 w-3" />
+                                        {stats.decreases} نقص
+                                    </Badge>
+                                )}
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
             )}
 
-            {/* Filters */}
+            {/* Stock Items */}
             <Card>
-                <CardContent className="pt-6">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1 relative">
-                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="بحث بالاسم أو الكود..."
-                                value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
-                                className="pr-10"
-                            />
-                        </div>
-                        <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
-                            <SelectTrigger className="w-full sm:w-[200px]">
-                                <Warehouse className="h-4 w-4 ml-2" />
-                                <SelectValue placeholder="جميع المخازن" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">جميع المخازن</SelectItem>
-                                {warehouses.map(w => (
-                                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Stock Items Table */}
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">أرصدة المخزون</CardTitle>
+                <CardHeader className="pb-3 px-4 sm:px-6">
+                    <CardTitle className="text-base sm:text-lg">
+                        {isAuditMode ? 'أدخل الكميات الفعلية' : 'أصناف المخزون'}
+                    </CardTitle>
+                    {isAuditMode && (
+                        <CardDescription>
+                            أدخل الكمية الفعلية لكل صنف، اترك الحقل فارغاً للأصناف التي لم يتم جردها
+                        </CardDescription>
+                    )}
                 </CardHeader>
-                <CardContent>
-                    {isLoading ? (
-                        <div className="flex items-center justify-center py-8">
+                <CardContent className="p-0 sm:p-6 sm:pt-0">
+                    {!selectedWarehouse ? (
+                        <div className="text-center py-12 text-muted-foreground">
+                            <Warehouse className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p>اختر المخزن لعرض الأصناف</p>
+                        </div>
+                    ) : isLoading ? (
+                        <div className="flex items-center justify-center py-12">
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                     ) : filteredItems.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
+                        <div className="text-center py-12 text-muted-foreground">
                             <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
                             <p>لا توجد أصناف في المخزون</p>
                         </div>
                     ) : (
-                        <div className="rounded-lg border overflow-hidden">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>المنتج</TableHead>
-                                        <TableHead>المخزن</TableHead>
-                                        <TableHead className="text-center">الكمية</TableHead>
-                                        <TableHead className="text-center">محجوز</TableHead>
-                                        <TableHead className="text-center">متاح</TableHead>
-                                        <TableHead className="text-center">الحد الأدنى</TableHead>
-                                        <TableHead className="text-center">الحالة</TableHead>
-                                        <TableHead></TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredItems.map(item => {
-                                        const available = item.quantity - item.reserved_quantity;
-                                        const isLow = item.product.min_stock > 0 && available < item.product.min_stock;
-                                        const inAdjustments = adjustments.some(a => a.id === item.id);
+                        <>
+                            {/* Mobile View */}
+                            <div className="sm:hidden divide-y">
+                                {filteredItems.map(item => {
+                                    const entry = auditEntries.get(item.id);
+                                    const hasChange = entry && entry.difference !== 0;
+                                    const isAudited = entry && entry.actual_quantity !== null;
 
-                                        return (
-                                            <TableRow key={item.id} className={cn(inAdjustments && "bg-muted/50")}>
-                                                <TableCell>
-                                                    <div>
-                                                        <p className="font-medium">{item.product.name}</p>
-                                                        <p className="text-xs text-muted-foreground">{item.product.code}</p>
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            className={cn(
+                                                "p-4",
+                                                isAudited && "bg-muted/30",
+                                                hasChange && entry.difference > 0 && "bg-green-50",
+                                                hasChange && entry.difference < 0 && "bg-red-50"
+                                            )}
+                                        >
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium truncate">{item.product.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{item.product.code}</p>
+                                                </div>
+                                                {isAudited && (
+                                                    <Check className="h-4 w-4 text-green-600 ml-2" />
+                                                )}
+                                            </div>
+
+                                            <div className="flex items-center gap-3">
+                                                <div className="text-sm">
+                                                    <span className="text-muted-foreground">النظام: </span>
+                                                    <span className="font-medium">{item.quantity} {item.product.unit}</span>
+                                                </div>
+
+                                                {isAuditMode && (
+                                                    <div className="flex-1 flex items-center gap-2">
+                                                        <span className="text-sm text-muted-foreground">الفعلي:</span>
+                                                        <Input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            placeholder="—"
+                                                            value={entry?.actual_quantity ?? ''}
+                                                            onChange={e => updateActualQuantity(item.id, e.target.value)}
+                                                            className={cn(
+                                                                "w-24 h-9 text-center",
+                                                                hasChange && entry.difference > 0 && "border-green-500 bg-green-50",
+                                                                hasChange && entry.difference < 0 && "border-red-500 bg-red-50"
+                                                            )}
+                                                        />
+                                                        {hasChange && (
+                                                            <Badge
+                                                                variant={entry.difference > 0 ? 'default' : 'destructive'}
+                                                                className="text-xs"
+                                                            >
+                                                                {entry.difference > 0 ? '+' : ''}{entry.difference}
+                                                            </Badge>
+                                                        )}
                                                     </div>
-                                                </TableCell>
-                                                <TableCell>{item.warehouse.name}</TableCell>
-                                                <TableCell className="text-center font-medium">
-                                                    {item.quantity} {item.product.unit}
-                                                </TableCell>
-                                                <TableCell className="text-center text-muted-foreground">
-                                                    {item.reserved_quantity}
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    {available}
-                                                </TableCell>
-                                                <TableCell className="text-center text-muted-foreground">
-                                                    {item.product.min_stock || '-'}
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    {isLow ? (
-                                                        <Badge variant="destructive" className="gap-1">
-                                                            <AlertTriangle className="h-3 w-3" />
-                                                            نقص
-                                                        </Badge>
-                                                    ) : (
-                                                        <Badge variant="outline" className="text-green-600">
-                                                            متوفر
-                                                        </Badge>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Desktop View */}
+                            <div className="hidden sm:block rounded-lg border overflow-hidden">
+                                <table className="w-full">
+                                    <thead className="bg-muted/50">
+                                        <tr>
+                                            <th className="text-right p-3 font-medium">الصنف</th>
+                                            <th className="text-center p-3 font-medium w-32">كمية النظام</th>
+                                            {isAuditMode && (
+                                                <>
+                                                    <th className="text-center p-3 font-medium w-40">الكمية الفعلية</th>
+                                                    <th className="text-center p-3 font-medium w-24">الفرق</th>
+                                                </>
+                                            )}
+                                            <th className="text-center p-3 font-medium w-20">الحالة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {filteredItems.map(item => {
+                                            const entry = auditEntries.get(item.id);
+                                            const hasChange = entry && entry.difference !== 0;
+                                            const isAudited = entry && entry.actual_quantity !== null;
+                                            const isLow = item.product.min_stock > 0 &&
+                                                (item.quantity - item.reserved_quantity) < item.product.min_stock;
+
+                                            return (
+                                                <tr
+                                                    key={item.id}
+                                                    className={cn(
+                                                        isAudited && "bg-muted/30",
+                                                        hasChange && entry.difference > 0 && "bg-green-50",
+                                                        hasChange && entry.difference < 0 && "bg-red-50"
                                                     )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        disabled={inAdjustments}
-                                                        onClick={() => {
-                                                            setSelectedItem(item);
-                                                            setNewQuantity(item.quantity.toString());
-                                                            setIsAdjustDialogOpen(true);
-                                                        }}
-                                                    >
-                                                        تسوية
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                                >
+                                                    <td className="p-3">
+                                                        <div>
+                                                            <p className="font-medium">{item.product.name}</p>
+                                                            <p className="text-xs text-muted-foreground">{item.product.code}</p>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-3 text-center font-medium">
+                                                        {item.quantity} {item.product.unit}
+                                                    </td>
+                                                    {isAuditMode && (
+                                                        <>
+                                                            <td className="p-3">
+                                                                <Input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    placeholder="أدخل الكمية الفعلية"
+                                                                    value={entry?.actual_quantity ?? ''}
+                                                                    onChange={e => updateActualQuantity(item.id, e.target.value)}
+                                                                    className={cn(
+                                                                        "text-center",
+                                                                        hasChange && entry.difference > 0 && "border-green-500",
+                                                                        hasChange && entry.difference < 0 && "border-red-500"
+                                                                    )}
+                                                                />
+                                                            </td>
+                                                            <td className="p-3 text-center">
+                                                                {hasChange ? (
+                                                                    <Badge variant={entry.difference > 0 ? 'default' : 'destructive'}>
+                                                                        {entry.difference > 0 ? '+' : ''}{entry.difference}
+                                                                    </Badge>
+                                                                ) : isAudited ? (
+                                                                    <span className="text-muted-foreground">0</span>
+                                                                ) : (
+                                                                    <span className="text-muted-foreground">—</span>
+                                                                )}
+                                                            </td>
+                                                        </>
+                                                    )}
+                                                    <td className="p-3 text-center">
+                                                        {isAuditMode ? (
+                                                            isAudited ? (
+                                                                <Check className="h-5 w-5 text-green-600 mx-auto" />
+                                                            ) : (
+                                                                <span className="text-muted-foreground">—</span>
+                                                            )
+                                                        ) : isLow ? (
+                                                            <Badge variant="destructive" className="gap-1">
+                                                                <AlertTriangle className="h-3 w-3" />
+                                                                نقص
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="outline" className="text-green-600">متوفر</Badge>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
                     )}
                 </CardContent>
             </Card>
 
-            {/* Adjustment Dialog */}
-            <Dialog open={isAdjustDialogOpen} onOpenChange={setIsAdjustDialogOpen}>
-                <DialogContent>
+            {/* Submit Dialog */}
+            <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
+                <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>تسوية المخزون</DialogTitle>
+                        <DialogTitle>حفظ نتائج الجرد</DialogTitle>
+                        <DialogDescription>
+                            سيتم تنفيذ {entriesWithChanges.length} تسوية على المخزون
+                        </DialogDescription>
                     </DialogHeader>
 
-                    {selectedItem && (
-                        <div className="space-y-4">
-                            <div className="p-4 bg-muted rounded-lg">
-                                <p className="font-medium">{selectedItem.product.name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                    {selectedItem.product.code} • {selectedItem.warehouse.name}
-                                </p>
+                    <div className="space-y-4">
+                        {/* Summary */}
+                        <div className="p-3 bg-muted rounded-lg text-sm">
+                            <div className="flex justify-between mb-1">
+                                <span>أصناف تم جردها:</span>
+                                <span className="font-medium">{stats.auditedCount}</span>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>الكمية الحالية</Label>
-                                    <Input
-                                        value={`${selectedItem.quantity} ${selectedItem.product.unit}`}
-                                        disabled
-                                        className="text-center"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>الكمية الجديدة (الفعلية)</Label>
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={newQuantity}
-                                        onChange={e => setNewQuantity(e.target.value)}
-                                        className="text-center"
-                                        autoFocus
-                                    />
-                                </div>
+                            <div className="flex justify-between mb-1">
+                                <span>تسويات مطلوبة:</span>
+                                <span className="font-medium">{entriesWithChanges.length}</span>
                             </div>
-
-                            {newQuantity && parseFloat(newQuantity) !== selectedItem.quantity && (
-                                <div className={cn(
-                                    "p-3 rounded-lg flex items-center gap-2",
-                                    parseFloat(newQuantity) > selectedItem.quantity
-                                        ? "bg-green-50 text-green-700"
-                                        : "bg-red-50 text-red-700"
-                                )}>
-                                    {parseFloat(newQuantity) > selectedItem.quantity ? (
-                                        <Plus className="h-4 w-4" />
-                                    ) : (
-                                        <Minus className="h-4 w-4" />
-                                    )}
-                                    <span>
-                                        فرق التسوية: {' '}
-                                        <strong>
-                                            {parseFloat(newQuantity) > selectedItem.quantity ? '+' : ''}
-                                            {(parseFloat(newQuantity) - selectedItem.quantity).toFixed(2)}
-                                        </strong>
-                                        {' '}{selectedItem.product.unit}
-                                    </span>
+                            {stats.increases > 0 && (
+                                <div className="flex justify-between text-green-600">
+                                    <span>زيادة:</span>
+                                    <span>{stats.increases} صنف</span>
+                                </div>
+                            )}
+                            {stats.decreases > 0 && (
+                                <div className="flex justify-between text-red-600">
+                                    <span>نقص:</span>
+                                    <span>{stats.decreases} صنف</span>
                                 </div>
                             )}
                         </div>
-                    )}
 
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsAdjustDialogOpen(false)}>
+                        <div className="space-y-2">
+                            <Label>سبب الجرد</Label>
+                            <Textarea
+                                value={auditReason}
+                                onChange={e => setAuditReason(e.target.value)}
+                                placeholder="مثال: جرد دوري شهر يناير 2026"
+                                rows={2}
+                            />
+                        </div>
+
+                        {isSubmitting && (
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                    <span>جاري التنفيذ...</span>
+                                    <span>{submitProgress.current} / {submitProgress.total}</span>
+                                </div>
+                                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-primary transition-all"
+                                        style={{
+                                            width: `${(submitProgress.current / submitProgress.total) * 100}%`
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsSubmitDialogOpen(false)}
+                            disabled={isSubmitting}
+                        >
                             إلغاء
                         </Button>
-                        <Button onClick={handleAddAdjustment}>
-                            إضافة للتسويات
+                        <Button
+                            onClick={handleSubmitAudit}
+                            disabled={isSubmitting || !auditReason.trim()}
+                            className="gap-2"
+                        >
+                            {isSubmitting ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Save className="h-4 w-4" />
+                            )}
+                            تنفيذ التسويات
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Cancel Confirmation */}
+            <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>إلغاء جلسة الجرد؟</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            سيتم فقدان جميع البيانات التي أدخلتها. هل أنت متأكد؟
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>استمرار الجرد</AlertDialogCancel>
+                        <AlertDialogAction onClick={cancelAudit} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            إلغاء الجرد
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

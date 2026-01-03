@@ -214,8 +214,8 @@ class InventoryService {
     }
 
     /**
-     * Record stock adjustment
-     */
+ * Record stock adjustment
+ */
     async recordAdjustment(
         productId: string,
         warehouseId: string,
@@ -240,12 +240,18 @@ class InventoryService {
             throw new Error('الكمية الجديدة مساوية للكمية الحالية');
         }
 
+        // Use 'adjustment' for increase (adds to quantity)
+        // Use 'damage' for decrease (subtracts from quantity)
+        // This is because the trigger in 04_inventory.sql treats 'adjustment' as addition
+        // and treats other types (like 'damage') as subtraction
+        const transactionType = difference > 0 ? 'adjustment' : 'damage';
+
         return this.recordTransaction({
             product_id: productId,
             warehouse_id: warehouseId,
-            transaction_type: 'adjustment',
+            transaction_type: transactionType,
             quantity: Math.abs(difference),
-            notes: `تسوية: ${reason}. التغيير: ${difference > 0 ? '+' : ''}${difference}`,
+            notes: `تسوية جرد: ${reason}. من ${currentQty} إلى ${newQuantity} (${difference > 0 ? '+' : ''}${difference})`,
             created_by: createdBy,
         });
     }
