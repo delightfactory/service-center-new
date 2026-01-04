@@ -195,7 +195,7 @@ export function EgyptianPlateInput({
     }, []);
 
     const inputBaseClass = cn(
-        "w-12 h-14 text-center text-2xl font-bold rounded-xl border-2",
+        "w-10 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold rounded-lg sm:rounded-xl border-2",
         "focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary",
         "transition-all duration-200",
         "bg-card text-foreground",
@@ -208,9 +208,9 @@ export function EgyptianPlateInput({
                 رقم اللوحة
             </label>
 
-            <div className="flex items-center justify-center gap-2 rtl">
+            <div className="flex items-center justify-center gap-1 sm:gap-2 rtl" dir="rtl">
                 {/* Letters Section */}
-                <div className="flex gap-1.5">
+                <div className="flex gap-1 sm:gap-1.5">
                     {letters.map((letter, index) => (
                         <input
                             key={`letter-${index}`}
@@ -233,10 +233,10 @@ export function EgyptianPlateInput({
                 </div>
 
                 {/* Separator */}
-                <span className="text-2xl text-muted-foreground font-bold mx-1">-</span>
+                <span className="text-xl sm:text-2xl text-muted-foreground font-bold mx-0.5 sm:mx-1">-</span>
 
                 {/* Numbers Section */}
-                <div className="flex gap-1.5">
+                <div className="flex gap-1 sm:gap-1.5">
                     {numbers.map((number, index) => (
                         <input
                             key={`number-${index}`}

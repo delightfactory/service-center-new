@@ -91,9 +91,9 @@ export function VehicleDetailsStep({
             </p>
 
             {/* Form */}
-            <div className="flex-1 overflow-y-auto space-y-6">
+            <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6">
                 {/* Make & Model Row */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                         <Label htmlFor="make" className="flex items-center gap-2 mb-2">
                             <Car size={16} className="text-muted-foreground" />
@@ -103,7 +103,7 @@ export function VehicleDetailsStep({
                             value={values.make || ''}
                             onValueChange={(val) => handleChange('make', val)}
                         >
-                            <SelectTrigger id="make" className="h-12">
+                            <SelectTrigger id="make" className="h-11 sm:h-12">
                                 <SelectValue placeholder="اختر الماركة" />
                             </SelectTrigger>
                             <SelectContent>
@@ -125,13 +125,13 @@ export function VehicleDetailsStep({
                             value={values.model || ''}
                             onChange={(e) => handleChange('model', e.target.value)}
                             placeholder="مثال: كامري"
-                            className="h-12"
+                            className="h-11 sm:h-12"
                         />
                     </div>
                 </div>
 
                 {/* Year & Color Row */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                         <Label htmlFor="year" className="flex items-center gap-2 mb-2">
                             <Calendar size={16} className="text-muted-foreground" />
@@ -141,7 +141,7 @@ export function VehicleDetailsStep({
                             value={values.year || ''}
                             onValueChange={(val) => handleChange('year', val)}
                         >
-                            <SelectTrigger id="year" className="h-12">
+                            <SelectTrigger id="year" className="h-11 sm:h-12">
                                 <SelectValue placeholder="اختر السنة" />
                             </SelectTrigger>
                             <SelectContent>
@@ -163,7 +163,7 @@ export function VehicleDetailsStep({
                             value={values.color || ''}
                             onValueChange={(val) => handleChange('color', val)}
                         >
-                            <SelectTrigger id="color" className="h-12">
+                            <SelectTrigger id="color" className="h-11 sm:h-12">
                                 <SelectValue placeholder="اختر اللون" />
                             </SelectTrigger>
                             <SelectContent>
@@ -220,10 +220,10 @@ export function VehicleDetailsStep({
                             value={values.mileage || ''}
                             onChange={(e) => handleChange('mileage', e.target.value.replace(/[^0-9]/g, ''))}
                             placeholder="مثال: 50000"
-                            className="h-12 pl-12"
+                            className="h-11 sm:h-12 pl-12"
                             dir="ltr"
                         />
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                             كم
                         </span>
                     </div>
@@ -232,7 +232,7 @@ export function VehicleDetailsStep({
 
             {/* Next Button */}
             <div className="pt-4 mt-auto">
-                <Button className="w-full h-12 text-base" onClick={onNext}>
+                <Button className="w-full h-11 sm:h-12 text-base" onClick={onNext}>
                     التالي
                 </Button>
             </div>
