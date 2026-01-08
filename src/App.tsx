@@ -1,4 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/utils/query-client';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { NotificationToast } from '@/components/ui/NotificationToast';
@@ -8,17 +9,6 @@ import { DevMaintenanceToggle } from '@/components/common/DevMaintenanceToggle';
 import { useMaintenanceMode } from '@/hooks/useMaintenanceMode';
 import { AppRouter } from '@/router';
 import './index.css';
-
-// Create React Query client
-const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            staleTime: 1000 * 60 * 5, // 5 minutes
-            retry: 1,
-            refetchOnWindowFocus: false,
-        },
-    },
-});
 
 // Inner app component that uses hooks
 function AppContent() {

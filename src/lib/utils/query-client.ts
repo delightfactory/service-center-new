@@ -24,11 +24,11 @@ export const queryClient = new QueryClient({
             // لا نعيد الطلب عند إعادة الاتصال إذا كانت البيانات حديثة
             refetchOnReconnect: 'always',
 
-            // لا نعيد الطلب عند mount إذا كانت البيانات حديثة
-            refetchOnMount: false,
+            // نعيد الطلب عند mount للتأكد من وجود بيانات
+            refetchOnMount: true,
 
-            // الشبكة: نفترض أننا متصلين
-            networkMode: 'offlineFirst',
+            // الشبكة: نستخدم الوضع العادي للتأكد من جلب البيانات
+            networkMode: 'online',
         },
         mutations: {
             // إعادة المحاولة للـ mutations
@@ -36,7 +36,7 @@ export const queryClient = new QueryClient({
             retryDelay: 1000,
 
             // Network mode
-            networkMode: 'offlineFirst',
+            networkMode: 'online',
         },
     },
 });
