@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
 import type { Profile } from '@/types';
@@ -21,7 +21,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [profile, setProfile] = useState<Profile | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
-    const isInitialized = useRef(false);
 
     // Fetch user profile
     const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
@@ -57,10 +56,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Initialize auth state - runs once
     useEffect(() => {
-        // Prevent double initialization in React Strict Mode
-        if (isInitialized.current) return;
-        isInitialized.current = true;
-
         console.log('[Auth] Initializing...');
 
         let isInitializing = true;
