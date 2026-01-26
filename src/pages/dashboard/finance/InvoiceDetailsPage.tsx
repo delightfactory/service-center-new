@@ -288,14 +288,7 @@ export function InvoiceDetailsPage() {
                 });
             if (error) throw error;
 
-            // Update invoice paid_amount
-            const newPaidAmount = (invoice?.paid_amount || 0) + amountNum;
-            const newStatus = newPaidAmount >= (invoice?.total_amount || 0) ? 'paid' : 'partial';
-
-            await supabase
-                .from('invoices')
-                .update({ paid_amount: newPaidAmount, status: newStatus })
-                .eq('id', id);
+            // ملاحظة: تحديث paid_amount/status يتم عبر Trigger قاعدة البيانات
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['invoice', id] });

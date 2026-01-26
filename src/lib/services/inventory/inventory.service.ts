@@ -379,30 +379,107 @@ class InventoryService {
      * Reserve stock for job order
      */
     async reserveStock(productId: string, warehouseId: string, quantity: number): Promise<void> {
-        const { error } = await supabase
+        const { data: item, error: itemError } = await supabase
+            .from('inventory_items')
+            .select('quantity, reserved_quantity')
+            .eq('product_id', productId)
+            .eq('warehouse_id', warehouseId)
+            .maybeSingle();
+
+        if (itemError) handleSupabaseError(itemError);
+
+        let currentQty = item?.quantity ?? 0;
+        let currentReserved = item?.reserved_quantity ?? 0;
+
+        if (!item) {
+            const { error: insertError } = await supabase
+                .from('inventory_items')
+                .insert({
+                    product_id: productId,
+                    warehouse_id: warehouseId,
+                    quantity: 0,
+                    reserved_quantity: 0,
+                });
+
+            if (insertError) handleSupabaseError(insertError);
+        }
+
+        const newReserved = currentReserved + quantity;
+        const balanceBefore = currentQty - currentReserved;
+        const balanceAfter = currentQty - newReserved;
+
+        const { error: updateError } = await supabase
             .from('inventory_items')
             .update({
-                reserved_quantity: supabase.rpc('increment', { amount: quantity }),
+                reserved_quantity: newReserved,
+                last_updated: new Date().toISOString(),
             })
             .eq('product_id', productId)
             .eq('warehouse_id', warehouseId);
 
-        if (error) handleSupabaseError(error);
+        if (updateError) handleSupabaseError(updateError);
+
+        const { error: txError } = await supabase
+            .from('inventory_transactions')
+            .insert({
+                product_id: productId,
+                warehouse_id: warehouseId,
+                transaction_type: 'reservation',
+                quantity,
+                balance_before: balanceBefore,
+                balance_after: balanceAfter,
+                reference_type: 'manual_reservation',
+                notes: 'حجز يدوي من النظام',
+            });
+
+        if (txError) handleSupabaseError(txError);
     }
 
     /**
      * Release reserved stock
      */
     async releaseReserve(productId: string, warehouseId: string, quantity: number): Promise<void> {
-        const { error } = await supabase
+        const { data: item, error: itemError } = await supabase
+            .from('inventory_items')
+            .select('quantity, reserved_quantity')
+            .eq('product_id', productId)
+            .eq('warehouse_id', warehouseId)
+            .maybeSingle();
+
+        if (itemError) handleSupabaseError(itemError);
+        if (!item) return;
+
+        const currentQty = item.quantity ?? 0;
+        const currentReserved = item.reserved_quantity ?? 0;
+        const newReserved = Math.max(0, currentReserved - quantity);
+        const balanceBefore = currentQty - currentReserved;
+        const balanceAfter = currentQty - newReserved;
+
+        const { error: updateError } = await supabase
             .from('inventory_items')
             .update({
-                reserved_quantity: supabase.rpc('decrement', { amount: quantity }),
+                reserved_quantity: newReserved,
+                last_updated: new Date().toISOString(),
             })
             .eq('product_id', productId)
             .eq('warehouse_id', warehouseId);
 
-        if (error) handleSupabaseError(error);
+        if (updateError) handleSupabaseError(updateError);
+
+        const { error: txError } = await supabase
+            .from('inventory_transactions')
+            .insert({
+                product_id: productId,
+                warehouse_id: warehouseId,
+                transaction_type: 'release_reservation',
+                quantity,
+                balance_before: balanceBefore,
+                balance_after: balanceAfter,
+                reference_type: 'manual_reservation',
+                notes: 'تحرير حجز يدوي من النظام',
+            });
+
+        if (txError) handleSupabaseError(txError);
     }
 }
 

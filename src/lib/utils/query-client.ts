@@ -18,14 +18,14 @@ export const queryClient = new QueryClient({
             retry: 3,
             retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 
-            // لا نعيد الطلب عند focus إذا كانت البيانات حديثة
-            refetchOnWindowFocus: false,
+            // نعيد الطلب عند التركيز لضمان تحديث البيانات بعد التنقل
+            refetchOnWindowFocus: 'always',
 
             // لا نعيد الطلب عند إعادة الاتصال إذا كانت البيانات حديثة
             refetchOnReconnect: 'always',
 
-            // نعيد الطلب عند mount للتأكد من وجود بيانات
-            refetchOnMount: true,
+            // نعيد الطلب عند mount دائماً لتفادي بقاء بيانات فارغة بسبب كاش سابق
+            refetchOnMount: 'always',
 
             // الشبكة: نستخدم الوضع العادي للتأكد من جلب البيانات
             networkMode: 'online',

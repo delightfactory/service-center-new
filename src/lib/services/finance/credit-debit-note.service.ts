@@ -202,21 +202,35 @@ class CreditDebitNoteService extends BaseService<CreditDebitNote, CreateNoteDTO,
 
         // Apply note
         if (note.note_type === 'credit') {
-            // Credit note reduces invoice amount
-            const newPaidAmount = invoice.paid_amount + note.amount;
+            // Credit note offsets the remaining amount (without touching generated remaining_amount)
+            const newPaidAmount = Math.min(invoice.total_amount, invoice.paid_amount + note.amount);
+            const newStatus = newPaidAmount >= invoice.total_amount
+                ? 'paid'
+                : newPaidAmount > 0
+                    ? 'partial'
+                    : 'approved';
+
             await supabase
                 .from('invoices')
                 .update({
                     paid_amount: newPaidAmount,
-                    status: newPaidAmount >= invoice.total_amount ? 'paid' : 'partial',
+                    status: newStatus,
                 })
                 .eq('id', targetInvoiceId);
         } else {
-            // Debit note increases invoice amount
+            // Debit note increases invoice amount; recompute status based on paid_amount
+            const newTotalAmount = invoice.total_amount + note.amount;
+            const newStatus = invoice.paid_amount >= newTotalAmount
+                ? 'paid'
+                : invoice.paid_amount > 0
+                    ? 'partial'
+                    : 'approved';
+
             await supabase
                 .from('invoices')
                 .update({
-                    total_amount: invoice.total_amount + note.amount,
+                    total_amount: newTotalAmount,
+                    status: newStatus,
                 })
                 .eq('id', targetInvoiceId);
         }

@@ -121,3 +121,6 @@ export function isMobile(): boolean {
 export function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+// Debug helpers (controlled via localStorage in production)
+export { debugLog, debugWarn, debugError, isDebugLogsEnabled } from './utils/debug';

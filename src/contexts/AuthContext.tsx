@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client';
+import { debugLog, debugWarn, debugError } from '@/lib/utils';
 import type { Profile } from '@/types';
 
 interface AuthContextType {
@@ -21,11 +23,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [profile, setProfile] = useState<Profile | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
+    const lastProfileIdRef = useRef<string | null>(null);
 
     // Fetch user profile
     const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
         try {
-            console.log('[Auth] Fetching profile for:', userId);
+            debugLog('[Auth] Fetching profile for:', userId);
 
             const { data, error } = await supabase
                 .from('profiles')
@@ -34,14 +38,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .single();
 
             if (error) {
-                console.error('[Auth] Error fetching profile:', error.message);
+                debugWarn('[Auth] Error fetching profile:', error.message);
                 return null;
             }
 
-            console.log('[Auth] Profile fetched successfully:', data?.full_name);
+            debugLog('[Auth] Profile fetched successfully:', data?.full_name);
             return data as Profile;
         } catch (error) {
-            console.error('[Auth] Exception fetching profile:', error);
+            debugError('[Auth] Exception fetching profile:', error);
             return null;
         }
     }, []);
@@ -56,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Initialize auth state - runs once
     useEffect(() => {
-        console.log('[Auth] Initializing...');
+        debugLog('[Auth] Initializing...');
 
         let isInitializing = true;
 
@@ -66,12 +70,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const { data: { session: initialSession }, error } = await supabase.auth.getSession();
 
                 if (error) {
-                    console.error('[Auth] Error getting session:', error.message);
+                    debugWarn('[Auth] Error getting session:', error.message);
                     setLoading(false);
                     return;
                 }
 
-                console.log('[Auth] Session exists:', !!initialSession);
+                debugLog('[Auth] Session exists:', !!initialSession);
 
                 setSession(initialSession);
                 setUser(initialSession?.user ?? null);
@@ -81,9 +85,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setProfile(profileData);
                 }
 
-                console.log('[Auth] Initialization complete');
+                debugLog('[Auth] Initialization complete');
             } catch (error) {
-                console.error('[Auth] Init error:', error);
+                debugError('[Auth] Init error:', error);
             } finally {
                 isInitializing = false;
                 setLoading(false);
@@ -95,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, newSession) => {
-                console.log('[Auth] State change:', event);
+                debugLog('[Auth] State change:', event);
 
                 // Skip INITIAL_SESSION event as we handle it in initAuth
                 if (event === 'INITIAL_SESSION') {
@@ -104,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                 // Skip if still initializing to avoid race conditions
                 if (isInitializing && event === 'SIGNED_IN') {
-                    console.log('[Auth] Skipping SIGNED_IN during init');
+                    debugLog('[Auth] Skipping SIGNED_IN during init');
                     return;
                 }
 
@@ -124,6 +128,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             subscription.unsubscribe();
         };
     }, [fetchProfile]);
+
+    // Ensure queries refetch once auth/profile becomes available
+    useEffect(() => {
+        if (loading) return;
+
+        const currentProfileId = profile?.id ?? null;
+        if (currentProfileId && currentProfileId !== lastProfileIdRef.current) {
+            debugLog('[Auth] Profile ready → invalidate queries', currentProfileId);
+            queryClient.invalidateQueries();
+        }
+
+        if (!currentProfileId && lastProfileIdRef.current) {
+            debugLog('[Auth] Profile cleared → clear query cache');
+            queryClient.clear();
+        }
+
+        lastProfileIdRef.current = currentProfileId;
+    }, [loading, profile?.id, queryClient]);
 
     // Sign in with email/password
     const signIn = async (email: string, password: string) => {

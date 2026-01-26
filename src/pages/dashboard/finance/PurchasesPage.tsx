@@ -331,29 +331,18 @@ export function PurchasesPage() {
                 if (!item.product_id) continue;
 
                 // Get or create inventory item
-                const { data: existingItem } = await supabase
+                const { data: existingItem, error: existingItemError } = await supabase
                     .from('inventory_items')
                     .select('quantity')
                     .eq('product_id', item.product_id)
                     .eq('warehouse_id', defaultWarehouse?.id)
-                    .single();
+                    .maybeSingle();
+
+                if (existingItemError) throw existingItemError;
 
                 const currentQty = existingItem?.quantity || 0;
 
-                // Upsert inventory
-                const { error: upsertError } = await supabase
-                    .from('inventory_items')
-                    .upsert({
-                        product_id: item.product_id,
-                        warehouse_id: defaultWarehouse?.id,
-                        quantity: currentQty + item.quantity,
-                        last_updated: new Date().toISOString(),
-                    }, {
-                        onConflict: 'product_id,warehouse_id',
-                    });
-                if (upsertError) throw upsertError;
-
-                // Create inventory transaction
+                // Create inventory transaction (التريجر سيحدث المخزون تلقائياً)
                 const { error: txError } = await supabase
                     .from('inventory_transactions')
                     .insert({

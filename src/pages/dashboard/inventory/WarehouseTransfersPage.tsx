@@ -250,6 +250,7 @@ export function WarehouseTransfersPage() {
 
             // Process each valid item
             for (const item of validItems) {
+                const itemCode = `${transferCode}-${item.product_id.slice(0, 8).toUpperCase()}`;
                 // Get source inventory item
                 const { data: sourceItem } = await supabase
                     .from('inventory_items')
@@ -267,7 +268,7 @@ export function WarehouseTransfersPage() {
                 const { error: outError } = await supabase
                     .from('inventory_transactions')
                     .insert({
-                        code: transferCode,
+                        code: `${itemCode}-OUT`,
                         product_id: item.product_id,
                         warehouse_id: fromWarehouseId,
                         transaction_type: 'transfer_out',
@@ -280,17 +281,6 @@ export function WarehouseTransfersPage() {
                     });
                 if (outError) throw outError;
 
-                // Decrease source inventory
-                const { error: decreaseError } = await supabase
-                    .from('inventory_items')
-                    .update({
-                        quantity: sourceQty - item.quantity,
-                        last_updated: new Date().toISOString(),
-                    })
-                    .eq('product_id', item.product_id)
-                    .eq('warehouse_id', fromWarehouseId);
-                if (decreaseError) throw decreaseError;
-
                 // Get destination inventory
                 const { data: destItem } = await supabase
                     .from('inventory_items')
@@ -301,24 +291,11 @@ export function WarehouseTransfersPage() {
 
                 const destQty = destItem?.quantity || 0;
 
-                // Upsert destination inventory
-                const { error: upsertError } = await supabase
-                    .from('inventory_items')
-                    .upsert({
-                        product_id: item.product_id,
-                        warehouse_id: toWarehouseId,
-                        quantity: destQty + item.quantity,
-                        last_updated: new Date().toISOString(),
-                    }, {
-                        onConflict: 'product_id,warehouse_id',
-                    });
-                if (upsertError) throw upsertError;
-
-                // Create transfer_in transaction
+                // Create transfer_in transaction (التريجر سيحدث المخزون تلقائياً)
                 const { error: inError } = await supabase
                     .from('inventory_transactions')
                     .insert({
-                        code: transferCode + '-IN',
+                        code: `${itemCode}-IN`,
                         product_id: item.product_id,
                         warehouse_id: toWarehouseId,
                         transaction_type: 'transfer_in',
