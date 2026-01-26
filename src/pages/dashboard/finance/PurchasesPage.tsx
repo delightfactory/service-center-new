@@ -51,6 +51,7 @@ import {
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { PageHeader, EmptyState } from '@/components/shared';
 import { useRealtime } from '@/hooks';
+import { useAuth } from '@/contexts/AuthContext';
 
 // ============================================================
 // Purchases Page - فواتير المشتريات
@@ -101,6 +102,8 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 export function PurchasesPage() {
     const queryClient = useQueryClient();
+    const { profile } = useAuth();
+    const branchId = profile?.branch_id || null;
     const [showDialog, setShowDialog] = useState(false);
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
@@ -146,7 +149,7 @@ export function PurchasesPage() {
 
     // Fetch purchase invoices
     const { data: invoices, isLoading } = useQuery({
-        queryKey: ['purchase-invoices', statusFilter],
+        queryKey: ['purchase-invoices', statusFilter, branchId],
         queryFn: async () => {
             let query = supabase
                 .from('invoices')
@@ -159,6 +162,10 @@ export function PurchasesPage() {
                 .eq('invoice_type', 'purchase')
                 .order('created_at', { ascending: false })
                 .limit(100);
+
+            if (branchId) {
+                query = query.eq('branch_id', branchId);
+            }
 
             if (statusFilter !== 'all') {
                 query = query.eq('status', statusFilter);
@@ -303,62 +310,11 @@ export function PurchasesPage() {
     // Approve invoice mutation
     const approveMutation = useMutation({
         mutationFn: async (invoiceId: string) => {
-            // Get invoice
-            const { data: invoice } = await supabase
-                .from('invoices')
-                .select('*, invoice_items(*)')
-                .eq('id', invoiceId)
-                .single();
-
-            // Get current user
-            const { data: { user } } = await supabase.auth.getUser();
-
-            // Update invoice status
-            const { error: updateError } = await supabase
+            const { error } = await supabase
                 .from('invoices')
                 .update({ status: 'approved' })
                 .eq('id', invoiceId);
-            if (updateError) throw updateError;
-
-            // Add inventory for each item
-            const { data: defaultWarehouse } = await supabase
-                .from('warehouses')
-                .select('id')
-                .eq('is_default', true)
-                .single();
-
-            for (const item of invoice.invoice_items) {
-                if (!item.product_id) continue;
-
-                // Get or create inventory item
-                const { data: existingItem, error: existingItemError } = await supabase
-                    .from('inventory_items')
-                    .select('quantity')
-                    .eq('product_id', item.product_id)
-                    .eq('warehouse_id', defaultWarehouse?.id)
-                    .maybeSingle();
-
-                if (existingItemError) throw existingItemError;
-
-                const currentQty = existingItem?.quantity || 0;
-
-                // Create inventory transaction (التريجر سيحدث المخزون تلقائياً)
-                const { error: txError } = await supabase
-                    .from('inventory_transactions')
-                    .insert({
-                        product_id: item.product_id,
-                        warehouse_id: defaultWarehouse?.id,
-                        transaction_type: 'purchase',
-                        quantity: item.quantity,
-                        balance_before: currentQty,
-                        balance_after: currentQty + item.quantity,
-                        reference_type: 'invoice',
-                        reference_id: invoiceId,
-                        notes: `شراء - فاتورة ${invoice.code}`,
-                        created_by: user?.id,
-                    });
-                if (txError) throw txError;
-            }
+            if (error) throw error;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['purchase-invoices'] });

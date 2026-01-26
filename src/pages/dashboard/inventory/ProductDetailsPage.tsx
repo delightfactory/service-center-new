@@ -125,6 +125,8 @@ const productTypeConfig: Record<ProductType, { label: string; icon: React.ReactN
 const transactionTypeLabels: Record<string, { label: string; color: string }> = {
     purchase: { label: 'شراء', color: 'text-green-600' },
     sale: { label: 'بيع', color: 'text-red-600' },
+    sales_return: { label: 'مرتجع مبيعات', color: 'text-emerald-600' },
+    purchase_return: { label: 'مرتجع مشتريات', color: 'text-rose-600' },
     job_consumption: { label: 'استهلاك أمر شغل', color: 'text-orange-600' },
     job_return: { label: 'إرجاع من أمر شغل', color: 'text-cyan-600' },
     transfer_in: { label: 'تحويل وارد', color: 'text-purple-600' },
@@ -621,7 +623,7 @@ export function ProductDetailsPage() {
                                             <TableBody>
                                                 {transactions.map(tx => {
                                                     const txConfig = transactionTypeLabels[tx.transaction_type] || { label: tx.transaction_type, color: 'text-gray-600' };
-                                                    const isNegative = ['sale', 'job_consumption', 'transfer_out', 'damage'].includes(tx.transaction_type);
+                                                    const isNegative = ['sale', 'purchase_return', 'job_consumption', 'transfer_out', 'damage'].includes(tx.transaction_type);
                                                     return (
                                                         <TableRow key={tx.id}>
                                                             <TableCell className="font-mono text-sm">{tx.code}</TableCell>

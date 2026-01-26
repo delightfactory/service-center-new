@@ -271,11 +271,18 @@ export function InvoiceDetailsPage() {
             if (!profile?.branch_id) throw new Error('لا يوجد فرع محدد');
 
             const isCustomerInvoice = invoice?.invoice_type === 'sales' || invoice?.invoice_type === 'sales_return';
+            const paymentType = invoice?.invoice_type === 'purchase'
+                ? 'supplier_payment'
+                : invoice?.invoice_type === 'purchase_return'
+                    ? 'refund_from_supplier'
+                    : invoice?.invoice_type === 'sales_return'
+                        ? 'refund_to_customer'
+                        : 'customer_receipt';
 
             const { error } = await supabase
                 .from('payments')
                 .insert({
-                    payment_type: isCustomerInvoice ? 'customer_receipt' : 'supplier_payment',
+                    payment_type: paymentType,
                     payment_method: paymentMethod,
                     amount: amountNum,
                     treasury_id: paymentTreasuryId,

@@ -130,13 +130,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [fetchProfile]);
 
     // Ensure queries refetch once auth/profile becomes available
+    // FIX: Added refetchQueries to solve navigation loading bug
     useEffect(() => {
         if (loading) return;
 
         const currentProfileId = profile?.id ?? null;
+
         if (currentProfileId && currentProfileId !== lastProfileIdRef.current) {
-            debugLog('[Auth] Profile ready → invalidate queries', currentProfileId);
+            debugLog('[Auth] Profile ready → invalidate and refetch queries', currentProfileId);
+            // First invalidate all queries to mark them as stale
             queryClient.invalidateQueries();
+            // Then force refetch all active queries
+            // This ensures queries with enabled: !!profile?.id will now execute
+            queryClient.refetchQueries({ type: 'active' }).catch((err) => {
+                debugWarn('[Auth] Some queries failed to refetch:', err);
+            });
         }
 
         if (!currentProfileId && lastProfileIdRef.current) {

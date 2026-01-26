@@ -139,8 +139,13 @@ export function PaymentModal({ open, onOpenChange, invoice }: PaymentModalProps)
             if (invoiceFetchError) throw invoiceFetchError;
 
             // Determine payment_type based on invoice_type
-            const isPurchaseInvoice = invoiceData?.invoice_type === 'purchase' || invoiceData?.invoice_type === 'purchase_return';
-            const paymentTypeValue = isPurchaseInvoice ? 'supplier_payment' : 'customer_receipt';
+            const paymentTypeValue = invoiceData?.invoice_type === 'purchase'
+                ? 'supplier_payment'
+                : invoiceData?.invoice_type === 'purchase_return'
+                    ? 'refund_from_supplier'
+                    : invoiceData?.invoice_type === 'sales_return'
+                        ? 'refund_to_customer'
+                        : 'customer_receipt';
 
             // Get branch_id from profile or invoice
             const branchId = profile?.branch_id || invoiceData?.branch_id;
@@ -155,8 +160,12 @@ export function PaymentModal({ open, onOpenChange, invoice }: PaymentModalProps)
                     paymentMethod === 'check' ? 'cheque' : paymentMethod,
                 treasury_id: treasuryId,
                 invoice_id: invoice.id,
-                customer_id: isPurchaseInvoice ? null : (invoiceData?.customer_id || null),
-                supplier_id: isPurchaseInvoice ? (invoiceData?.supplier_id || null) : null,
+                customer_id: ['sales', 'sales_return'].includes(invoiceData?.invoice_type || '')
+                    ? (invoiceData?.customer_id || null)
+                    : null,
+                supplier_id: ['purchase', 'purchase_return'].includes(invoiceData?.invoice_type || '')
+                    ? (invoiceData?.supplier_id || null)
+                    : null,
                 amount: paymentAmount,
                 payment_date: new Date().toISOString().split('T')[0],
                 reference: reference || null,

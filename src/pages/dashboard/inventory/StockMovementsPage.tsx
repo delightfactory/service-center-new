@@ -37,7 +37,7 @@ import { PageHeader, EmptyState } from '@/components/shared';
 // Stock Movements Page - صفحة حركات المخزون
 // ============================================================
 
-type TransactionType = 'purchase' | 'sale' | 'job_consumption' | 'job_return' |
+type TransactionType = 'purchase' | 'sale' | 'sales_return' | 'purchase_return' | 'job_consumption' | 'job_return' |
     'transfer_in' | 'transfer_out' | 'adjustment' | 'damage' | 'opening';
 
 interface InventoryTransaction {
@@ -68,6 +68,8 @@ const transactionTypeConfig: Record<TransactionType, {
 }> = {
     purchase: { label: 'شراء', color: 'bg-green-100 text-green-800', icon: ArrowDownCircle, direction: 'in' },
     sale: { label: 'بيع', color: 'bg-blue-100 text-blue-800', icon: ArrowUpCircle, direction: 'out' },
+    sales_return: { label: 'مرتجع مبيعات', color: 'bg-emerald-100 text-emerald-800', icon: ArrowDownCircle, direction: 'in' },
+    purchase_return: { label: 'مرتجع مشتريات', color: 'bg-rose-100 text-rose-800', icon: ArrowUpCircle, direction: 'out' },
     job_consumption: { label: 'استهلاك أمر شغل', color: 'bg-orange-100 text-orange-800', icon: ArrowUpCircle, direction: 'out' },
     job_return: { label: 'إرجاع من أمر شغل', color: 'bg-cyan-100 text-cyan-800', icon: ArrowDownCircle, direction: 'in' },
     transfer_in: { label: 'تحويل وارد', color: 'bg-purple-100 text-purple-800', icon: ArrowRightLeft, direction: 'in' },

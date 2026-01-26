@@ -147,17 +147,20 @@ export const PRODUCT_TYPES: Record<ProductType, string> = {
 export type InventoryTxType = 
   | 'purchase'        // شراء
   | 'sale'            // بيع
+  | 'sales_return'    // مرتجع مبيعات
   | 'job_consumption' // استهلاك أمر شغل
   | 'job_return'      // إرجاع من أمر شغل
   | 'transfer_in'     // تحويل وارد
   | 'transfer_out'    // تحويل صادر
   | 'adjustment'      // تسوية
   | 'damage'          // تالف
-  | 'opening';        // رصيد افتتاحي
+  | 'opening'         // رصيد افتتاحي
+  | 'purchase_return'; // مرتجع مشتريات
 
 export const INVENTORY_TX_TYPES: Record<InventoryTxType, string> = {
   purchase: 'شراء',
   sale: 'بيع',
+  sales_return: 'مرتجع مبيعات',
   job_consumption: 'استهلاك أمر شغل',
   job_return: 'إرجاع من أمر شغل',
   transfer_in: 'تحويل وارد',
@@ -165,6 +168,7 @@ export const INVENTORY_TX_TYPES: Record<InventoryTxType, string> = {
   adjustment: 'تسوية',
   damage: 'تالف',
   opening: 'رصيد افتتاحي',
+  purchase_return: 'مرتجع مشتريات',
 };
 
 // 11. أنواع الخزينة
