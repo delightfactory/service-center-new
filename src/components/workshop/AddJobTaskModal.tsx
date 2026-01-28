@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, ClipboardList } from 'lucide-react';
+import { Plus, ClipboardList, X, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import {
     Dialog,
     DialogContent,
@@ -17,10 +17,10 @@ import {
 } from '@/components/ui/dialog';
 
 // ============================================================
-// Add Job Task Modal Component
+// Add Job Task Modal Component - Multi-Task Support
 // ============================================================
-// إضافة مهمة جديدة لأمر الشغل (ToDo للفني)
-// منفصل عن بنود الفاتورة (job_items)
+// إضافة مهام متعددة لأمر الشغل دفعة واحدة
+// تحسين تجربة المستخدم بدلاً من إضافة مهمة واحدة في كل مرة
 // ============================================================
 
 interface AddJobTaskModalProps {
@@ -30,15 +30,24 @@ interface AddJobTaskModalProps {
     onSuccess?: () => void;
 }
 
-interface TaskForm {
+interface TaskItem {
+    id: string;
     description: string;
-    notes: string;
 }
 
-const initialForm: TaskForm = {
-    description: '',
-    notes: '',
-};
+// Quick task templates
+const QUICK_TASKS = [
+    'فحص الفرامل',
+    'تغيير الزيت',
+    'فحص التكييف',
+    'فحص العفشة',
+    'فحص الكهرباء',
+    'تغيير الفلتر',
+    'فحص البطارية',
+    'فحص الإطارات',
+    'فحص المحرك',
+    'فحص ناقل الحركة',
+];
 
 export function AddJobTaskModal({
     jobOrderId,
@@ -48,31 +57,69 @@ export function AddJobTaskModal({
 }: AddJobTaskModalProps) {
     const { profile } = useAuth();
     const queryClient = useQueryClient();
-    const [form, setForm] = useState<TaskForm>(initialForm);
+    const [tasks, setTasks] = useState<TaskItem[]>([]);
+    const [currentInput, setCurrentInput] = useState('');
     const [error, setError] = useState<string | null>(null);
 
-    // Create mutation
+    // Generate unique ID for each task
+    const generateId = () => `task-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+    // Add task to list
+    const addTask = (description: string) => {
+        const trimmed = description.trim();
+        if (!trimmed) return;
+
+        // Check for duplicates
+        if (tasks.some(t => t.description.toLowerCase() === trimmed.toLowerCase())) {
+            setError('هذه المهمة موجودة بالفعل');
+            return;
+        }
+
+        setTasks([...tasks, { id: generateId(), description: trimmed }]);
+        setCurrentInput('');
+        setError(null);
+    };
+
+    // Remove task from list
+    const removeTask = (id: string) => {
+        setTasks(tasks.filter(t => t.id !== id));
+    };
+
+    // Handle quick task click
+    const handleQuickTaskClick = (task: string) => {
+        if (!tasks.some(t => t.description.toLowerCase() === task.toLowerCase())) {
+            addTask(task);
+        }
+    };
+
+    // Handle input key press (Enter to add)
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addTask(currentInput);
+        }
+    };
+
+    // Create mutation for batch insert
     const createMutation = useMutation({
-        mutationFn: async (data: TaskForm) => {
-            const { data: result, error } = await supabase
+        mutationFn: async (taskList: TaskItem[]) => {
+            const insertData = taskList.map(task => ({
+                job_order_id: jobOrderId,
+                description: task.description,
+                created_by: profile?.id,
+            }));
+
+            const { data, error } = await supabase
                 .from('job_tasks')
-                .insert({
-                    job_order_id: jobOrderId,
-                    description: data.description,
-                    notes: data.notes || null,
-                    created_by: profile?.id,
-                })
-                .select()
-                .single();
+                .insert(insertData)
+                .select();
 
             if (error) throw error;
-            return result;
+            return data;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['job-tasks', jobOrderId] });
-            onOpenChange(false);
-            setForm(initialForm);
-            setError(null);
+            handleClose();
             onSuccess?.();
         },
         onError: (err) => {
@@ -81,83 +128,113 @@ export function AddJobTaskModal({
     });
 
     const handleSubmit = () => {
-        if (!form.description.trim()) {
-            setError('يرجى إدخال وصف المهمة');
+        if (tasks.length === 0) {
+            setError('يرجى إضافة مهمة واحدة على الأقل');
             return;
         }
-        createMutation.mutate(form);
+        createMutation.mutate(tasks);
     };
 
     const handleClose = () => {
         onOpenChange(false);
-        setForm(initialForm);
+        setTasks([]);
+        setCurrentInput('');
         setError(null);
     };
 
-    // Quick task templates
-    const quickTasks = [
-        'فحص الفرامل',
-        'تغيير الزيت',
-        'فحص التكييف',
-        'فحص العفشة',
-        'فحص الكهرباء',
-        'تغيير الفلتر',
-    ];
-
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <ClipboardList size={20} />
-                        إضافة مهمة جديدة
+                        إضافة مهام
                     </DialogTitle>
                     <DialogDescription>
-                        مهمة للفني (ستظهر في قائمة ToDo)
+                        يمكنك إضافة عدة مهام دفعة واحدة - حدد من القائمة أو أدخل مهمة مخصصة
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
-                    {/* Quick Tasks */}
+                    {/* Quick Tasks as chips */}
                     <div>
-                        <Label className="mb-2 block text-sm">مهام سريعة</Label>
+                        <Label className="mb-2 block text-sm">اختر من المهام السريعة</Label>
                         <div className="flex flex-wrap gap-2">
-                            {quickTasks.map((task) => (
-                                <button
-                                    key={task}
-                                    type="button"
-                                    onClick={() => setForm({ ...form, description: task })}
-                                    className="px-3 py-1.5 text-xs rounded-full border hover:bg-primary/10 hover:border-primary transition-colors"
-                                >
-                                    {task}
-                                </button>
-                            ))}
+                            {QUICK_TASKS.map((task) => {
+                                const isSelected = tasks.some(t => t.description.toLowerCase() === task.toLowerCase());
+                                return (
+                                    <button
+                                        key={task}
+                                        type="button"
+                                        onClick={() => handleQuickTaskClick(task)}
+                                        disabled={isSelected}
+                                        className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${isSelected
+                                                ? 'bg-primary text-primary-foreground border-primary cursor-not-allowed'
+                                                : 'hover:bg-primary/10 hover:border-primary'
+                                            }`}
+                                    >
+                                        {isSelected && <CheckCircle2 size={12} className="inline-block ml-1" />}
+                                        {task}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 
-                    {/* Description */}
+                    {/* Custom task input */}
                     <div>
-                        <Label htmlFor="description">وصف المهمة *</Label>
-                        <Input
-                            id="description"
-                            value={form.description}
-                            onChange={(e) => setForm({ ...form, description: e.target.value })}
-                            placeholder="مثال: فحص الفرامل الأمامية"
-                            className="mt-1"
-                        />
+                        <Label htmlFor="customTask">أو أدخل مهمة مخصصة</Label>
+                        <div className="flex gap-2 mt-1">
+                            <Input
+                                id="customTask"
+                                value={currentInput}
+                                onChange={(e) => setCurrentInput(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                placeholder="اكتب وصف المهمة واضغط Enter أو +"
+                                className="flex-1"
+                            />
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="icon"
+                                onClick={() => addTask(currentInput)}
+                                disabled={!currentInput.trim()}
+                            >
+                                <Plus size={18} />
+                            </Button>
+                        </div>
                     </div>
 
-                    {/* Notes */}
-                    <div>
-                        <Label htmlFor="notes">ملاحظات (اختياري)</Label>
-                        <Textarea
-                            id="notes"
-                            value={form.notes}
-                            onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                            placeholder="أي تفاصيل إضافية..."
-                            className="mt-1 min-h-[80px]"
-                        />
-                    </div>
+                    {/* Tasks list */}
+                    {tasks.length > 0 && (
+                        <div>
+                            <Label className="mb-2 block text-sm">
+                                المهام المحددة ({tasks.length})
+                            </Label>
+                            <div className="space-y-2 max-h-40 overflow-y-auto p-2 bg-muted/30 rounded-lg">
+                                {tasks.map((task, index) => (
+                                    <div
+                                        key={task.id}
+                                        className="flex items-center justify-between gap-2 p-2 bg-background rounded-md border"
+                                    >
+                                        <span className="flex items-center gap-2 text-sm">
+                                            <Badge variant="outline" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
+                                                {index + 1}
+                                            </Badge>
+                                            {task.description}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeTask(task.id)}
+                                            className="p-1 hover:bg-destructive/10 rounded text-destructive transition-colors"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Error */}
                     {error && (
@@ -169,7 +246,11 @@ export function AddJobTaskModal({
                     <Button variant="outline" onClick={handleClose} disabled={createMutation.isPending}>
                         إلغاء
                     </Button>
-                    <Button onClick={handleSubmit} disabled={createMutation.isPending} className="gap-2">
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={createMutation.isPending || tasks.length === 0}
+                        className="gap-2"
+                    >
                         {createMutation.isPending ? (
                             <>
                                 <span className="animate-spin">⏳</span>
@@ -178,7 +259,7 @@ export function AddJobTaskModal({
                         ) : (
                             <>
                                 <Plus size={18} />
-                                إضافة المهمة
+                                حفظ {tasks.length > 0 ? `(${tasks.length} مهام)` : ''}
                             </>
                         )}
                     </Button>

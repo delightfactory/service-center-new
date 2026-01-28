@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { customerService, type CreateCustomerDTO } from '@/lib/services/crm/customer.service';
 import { vehicleService, type CreateVehicleDTO } from '@/lib/services/crm/vehicle.service';
@@ -70,6 +71,7 @@ export function ReceptionWizardPage() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const { profile } = useAuth();
+    const canOverrideActiveJob = ['admin', 'manager', 'supervisor'].includes(profile?.role ?? '');
 
     const [state, setState] = useState<WizardState>(initialState);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -95,9 +97,23 @@ export function ReceptionWizardPage() {
         setState((prev) => ({ ...prev, customer }));
     };
 
-    // Vehicle change (Step 2)
+    // Vehicle change (Step 2) - auto-populate details from existing vehicle
     const handleVehicleChange = (vehicle: Vehicle | null) => {
-        setState((prev) => ({ ...prev, vehicle }));
+        setState((prev) => ({
+            ...prev,
+            vehicle,
+            // Auto-populate vehicle details from saved vehicle data
+            vehicleDetails: vehicle ? {
+                make: vehicle.make || '',
+                model: vehicle.model || '',
+                year: vehicle.year?.toString() || '',
+                color: vehicle.color || '',
+                fuel_level: prev.vehicleDetails.fuel_level || 50,
+                mileage: prev.vehicleDetails.mileage || '',
+            } : {
+                fuel_level: 50,
+            },
+        }));
     };
 
     // Add new customer
@@ -131,6 +147,24 @@ export function ReceptionWizardPage() {
         setState((prev) => ({ ...prev, vehicleDetails: details }));
     };
 
+    // Check for active jobs for selected vehicle
+    const { data: activeJob } = useQuery({
+        queryKey: ['active-job-check', state.vehicle?.id],
+        queryFn: async () => {
+            if (!state.vehicle?.id) return null;
+            const { data, error } = await supabase
+                .from('job_orders')
+                .select('id, code, status, created_at')
+                .eq('vehicle_id', state.vehicle.id)
+                .not('status', 'in', '("completed","delivered","cancelled")')
+                .maybeSingle();
+
+            if (error && error.code !== 'PGRST116') throw error;
+            return data;
+        },
+        enabled: !!state.vehicle?.id,
+    });
+
     // Handle proceed from Step 2
     const handleStep2Proceed = () => {
         if (!state.customer) {
@@ -140,6 +174,10 @@ export function ReceptionWizardPage() {
         // For quick_check, skip vehicle requirement
         if (state.entryType !== 'quick_check' && !state.vehicle) {
             setError('يرجى اختيار مركبة');
+            return;
+        }
+        if (activeJob && !canOverrideActiveJob) {
+            setError('لا يمكن فتح أمر شغل جديد لهذه المركبة لوجود أمر نشط حالياً. يرجى الرجوع للمشرف.');
             return;
         }
         nextStep();
@@ -273,14 +311,43 @@ export function ReceptionWizardPage() {
                             onAddNewVehicle={handleAddNewVehicle}
                         />
 
+                        {/* Active Job Warning */}
+                        {activeJob && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                                <AlertTriangle className="text-amber-600 mt-0.5" size={20} />
+                                <div>
+                                    <h4 className="font-semibold text-amber-900">تنبيه: يوجد أمر شغل نشط لهذه المركبة</h4>
+                                    <p className="text-sm text-amber-700 mt-1">
+                                        المركبة لديها أمر شغل مفتوح رقم <b>{activeJob.code}</b> بتاريخ {new Date(activeJob.created_at).toLocaleDateString('ar-EG')}
+                                    </p>
+                                    {!canOverrideActiveJob && (
+                                        <p className="text-xs text-amber-700 mt-2">
+                                            لا يمكن فتح أمر جديد إلا بصلاحية مشرف أو مدير.
+                                        </p>
+                                    )}
+                                    <Button
+                                        variant="link"
+                                        className="text-amber-800 p-0 h-auto mt-2 text-xs underline"
+                                        onClick={() => window.open(`/dashboard/workshop/${activeJob.id}`, '_blank')}
+                                    >
+                                        عرض أمر الشغل الحالي
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Proceed Button */}
                         {state.customer && (state.entryType === 'quick_check' || state.vehicle) && (
                             <div className="pt-4">
                                 <Button
                                     className="w-full h-12 text-base"
                                     onClick={handleStep2Proceed}
+                                    variant={activeJob ? "destructive" : "default"}
+                                    disabled={!!activeJob && !canOverrideActiveJob}
                                 >
-                                    التالي
+                                    {activeJob
+                                        ? (canOverrideActiveJob ? 'متابعة بفتح أمر شغل جديد (صلاحية مشرف)' : 'لا يمكن المتابعة - يوجد أمر نشط')
+                                        : 'التالي'}
                                 </Button>
                             </div>
                         )}

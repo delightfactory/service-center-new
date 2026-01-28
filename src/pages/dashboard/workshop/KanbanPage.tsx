@@ -89,6 +89,8 @@ export function KanbanPage() {
                 hasInvoice: invoicedJobIds.has(job.id),
             })) as JobOrder[];
         },
+        staleTime: 0, // Always consider data stale to ensure fresh status
+        refetchOnMount: 'always', // Always refetch when component mounts
         refetchInterval: 30000, // Refresh every 30 seconds
     });
 

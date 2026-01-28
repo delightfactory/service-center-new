@@ -97,6 +97,7 @@ export function InventoryPage() {
                     product:products (id, code, name, product_type, unit, min_stock, selling_price),
                     warehouse:warehouses (id, name)
                 `)
+                .gt('quantity', 0) // Only show items with stock
                 .order('last_updated', { ascending: false });
 
             if (warehouseFilter !== 'all') {

@@ -306,6 +306,17 @@ class JobOrderService extends BaseService<JobOrder, CreateJobOrderDTO, UpdateJob
 
         return summary;
     }
+
+    /**
+     * Dispense items for job order (Inventory Deduction)
+     */
+    async dispenseItems(jobOrderId: string): Promise<void> {
+        const { error } = await supabase.rpc('dispense_job_items', {
+            p_job_order_id: jobOrderId
+        });
+
+        if (error) handleSupabaseError(error);
+    }
 }
 
 export const jobOrderService = new JobOrderService();

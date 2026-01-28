@@ -52,6 +52,7 @@ export interface JobItem {
     technician_id: string | null;
     notes: string | null;
     is_completed: boolean;
+    is_dispensed?: boolean;
 }
 
 export interface JobTask {

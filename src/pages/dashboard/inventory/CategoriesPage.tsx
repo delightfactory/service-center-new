@@ -328,12 +328,15 @@ export function CategoriesPage() {
 
                         <div className="space-y-2">
                             <Label htmlFor="parent">التصنيف الأب</Label>
-                            <Select value={parentId} onValueChange={setParentId}>
+                            <Select
+                                value={parentId || "__none__"}
+                                onValueChange={(val) => setParentId(val === "__none__" ? "" : val)}
+                            >
                                 <SelectTrigger>
                                     <SelectValue placeholder="بدون تصنيف أب" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">بدون</SelectItem>
+                                    <SelectItem value="__none__">بدون</SelectItem>
                                     {categories?.filter(c => c.id !== editingCategory?.id).map(cat => (
                                         <SelectItem key={cat.id} value={cat.id}>
                                             {cat.name}

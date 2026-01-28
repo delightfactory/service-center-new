@@ -282,8 +282,9 @@ export function DashboardPage() {
                 active_customers: number;
             };
         },
-        staleTime: 30000, // 30 seconds
-        refetchInterval: 60000, // Auto refresh every minute
+        staleTime: 0, // Always fresh - dashboard should show latest data
+        refetchOnMount: 'always', // Always refetch when navigating back to dashboard
+        refetchInterval: 30000, // Auto refresh every 30 seconds
     });
 
     // Fetch jobs by status
@@ -294,7 +295,8 @@ export function DashboardPage() {
             if (error) throw error;
             return data as { status: string; count: number }[];
         },
-        staleTime: 30000,
+        staleTime: 0,
+        refetchOnMount: 'always',
     });
 
     // Fetch technicians status
@@ -305,7 +307,8 @@ export function DashboardPage() {
             if (error) throw error;
             return data as TechnicianData[];
         },
-        staleTime: 30000,
+        staleTime: 0,
+        refetchOnMount: 'always',
     });
 
     // Fetch urgent jobs
@@ -316,7 +319,8 @@ export function DashboardPage() {
             if (error) throw error;
             return data as UrgentJob[];
         },
-        staleTime: 30000,
+        staleTime: 0,
+        refetchOnMount: 'always',
     });
 
     // Fetch alerts
@@ -327,7 +331,8 @@ export function DashboardPage() {
             if (error) throw error;
             return data as { type: string; category: string; message: string; count: number; link: string | null }[];
         },
-        staleTime: 60000,
+        staleTime: 0,
+        refetchOnMount: 'always',
     });
 
     // Fetch recent assessments
@@ -348,7 +353,8 @@ export function DashboardPage() {
                 has_job_order: boolean;
             }[];
         },
-        staleTime: 30000,
+        staleTime: 0,
+        refetchOnMount: 'always',
     });
 
     // Status labels and colors

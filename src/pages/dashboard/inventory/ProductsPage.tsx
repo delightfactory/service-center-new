@@ -433,9 +433,11 @@ export function ProductsPage() {
                                                                     عرض التفاصيل
                                                                 </Link>
                                                             </DropdownMenuItem>
-                                                            <DropdownMenuItem className="gap-2">
-                                                                <Edit size={16} />
-                                                                تعديل
+                                                            <DropdownMenuItem asChild>
+                                                                <Link to={`/dashboard/inventory/products/${product.id}?edit=true`} className="gap-2">
+                                                                    <Edit size={16} />
+                                                                    تعديل
+                                                                </Link>
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
                                                             <DropdownMenuItem

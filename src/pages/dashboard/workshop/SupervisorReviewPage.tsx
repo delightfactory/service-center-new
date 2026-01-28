@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     ClipboardCheck, Car, User, Clock, CheckCircle2, XCircle,
     AlertTriangle, Eye, MessageSquare, ChevronLeft, RefreshCw,
-    Wrench, Timer, Star
+    Wrench, Timer, Star, Plus, Trash2, Edit3, RotateCcw
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import {
@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import {
     Dialog,
     DialogContent,
@@ -74,6 +75,15 @@ const priorityConfig: Record<PriorityLevel, { label: string; color: string; bgGr
     urgent: { label: 'عاجل', color: 'text-red-600', bgGradient: 'from-red-100 to-red-50' },
 };
 
+interface JobTask {
+    id: string;
+    description: string;
+    is_completed: boolean;
+    isNew?: boolean;
+    isDeleted?: boolean;
+    isEditing?: boolean;
+}
+
 export function SupervisorReviewPage() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -82,6 +92,11 @@ export function SupervisorReviewPage() {
     const [reviewNotes, setReviewNotes] = useState('');
     const [showApproveDialog, setShowApproveDialog] = useState(false);
     const [showRejectDialog, setShowRejectDialog] = useState(false);
+
+    // Task management state
+    const [jobTasks, setJobTasks] = useState<JobTask[]>([]);
+    const [newTaskDescription, setNewTaskDescription] = useState('');
+    const [isLoadingTasks, setIsLoadingTasks] = useState(false);
 
     // Fetch jobs pending review
     const { data: reviewJobs, isLoading, refetch } = useQuery({
@@ -163,17 +178,61 @@ export function SupervisorReviewPage() {
         },
     });
 
-    // Reject/Return mutation
+    // Reject/Return mutation - now includes task management
     const rejectMutation = useMutation({
         mutationFn: async (jobId: string) => {
-            if (!reviewNotes.trim()) {
-                throw new Error('يجب إدخال سبب الإرجاع');
+            // Check if there are task changes
+            const hasNewTasks = jobTasks.some(t => t.isNew && !t.isDeleted);
+            const hasDeletedTasks = jobTasks.some(t => t.isDeleted && !t.isNew);
+            const hasTaskChanges = hasNewTasks || hasDeletedTasks;
+
+            // Require review notes OR task changes
+            if (!reviewNotes.trim() && !hasTaskChanges) {
+                throw new Error('يجب إدخال سبب الإرجاع أو إجراء تعديلات على المهام');
             }
+
+            // 1. Handle task deletions
+            const deletedTasks = jobTasks.filter(t => t.isDeleted && !t.isNew);
+            for (const task of deletedTasks) {
+                const { error } = await supabase.from('job_tasks').delete().eq('id', task.id);
+                if (error) console.error('Error deleting task:', error);
+            }
+
+            // 2. Handle task updates (existing tasks that were modified)
+            const updatedTasks = jobTasks.filter(t => !t.isNew && !t.isDeleted);
+            for (const task of updatedTasks) {
+                const { error } = await supabase
+                    .from('job_tasks')
+                    .update({
+                        description: task.description,
+                        is_completed: task.is_completed
+                    })
+                    .eq('id', task.id);
+                if (error) console.error('Error updating task:', error);
+            }
+
+            // 3. Handle new tasks
+            const newTasks = jobTasks.filter(t => t.isNew && !t.isDeleted);
+            console.log('New tasks to insert:', newTasks);
+            if (newTasks.length > 0) {
+                const tasksToInsert = newTasks.map(t => ({
+                    job_order_id: jobId,
+                    description: t.description,
+                    is_completed: false,
+                }));
+                const { error } = await supabase.from('job_tasks').insert(tasksToInsert);
+                if (error) {
+                    console.error('Error inserting new tasks:', error);
+                    throw new Error('فشل في إضافة المهام الجديدة: ' + error.message);
+                }
+            }
+
+            // 4. Update job status
             const { error } = await supabase
                 .from('job_orders')
                 .update({
                     status: 'in_progress',
-                    review_notes: reviewNotes,
+                    review_notes: reviewNotes || 'تم تعديل المهام',
                     submitted_for_review_at: null,
                 })
                 .eq('id', jobId);
@@ -182,9 +241,12 @@ export function SupervisorReviewPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['supervisor-review-jobs'] });
             queryClient.invalidateQueries({ queryKey: ['job-orders'] });
+            queryClient.invalidateQueries({ queryKey: ['job-tasks'] });
             setShowRejectDialog(false);
             setSelectedJob(null);
             setReviewNotes('');
+            setJobTasks([]);
+            setNewTaskDescription('');
         },
         onError: (error: Error) => {
             console.error('Reject error:', error);
@@ -198,10 +260,60 @@ export function SupervisorReviewPage() {
         setShowApproveDialog(true);
     };
 
-    const handleReject = (job: ReviewJob) => {
+    const handleReject = async (job: ReviewJob) => {
         setSelectedJob(job);
         setReviewNotes('');
+        setNewTaskDescription('');
+        setIsLoadingTasks(true);
         setShowRejectDialog(true);
+
+        // Fetch tasks for this job
+        const { data } = await supabase
+            .from('job_tasks')
+            .select('id, description, is_completed')
+            .eq('job_order_id', job.id)
+            .order('created_at', { ascending: true });
+
+        setJobTasks((data || []).map(t => ({ ...t, isNew: false, isDeleted: false, isEditing: false })));
+        setIsLoadingTasks(false);
+    };
+
+    // Task management helper functions
+    const addNewTask = () => {
+        if (!newTaskDescription.trim()) return;
+        const newTask: JobTask = {
+            id: `new-${Date.now()}`,
+            description: newTaskDescription.trim(),
+            is_completed: false,
+            isNew: true,
+            isDeleted: false,
+        };
+        setJobTasks([...jobTasks, newTask]);
+        setNewTaskDescription('');
+    };
+
+    const deleteTask = (taskId: string) => {
+        setJobTasks(jobTasks.map(t =>
+            t.id === taskId ? { ...t, isDeleted: true } : t
+        ));
+    };
+
+    const toggleTaskCompletion = (taskId: string) => {
+        setJobTasks(jobTasks.map(t =>
+            t.id === taskId ? { ...t, is_completed: !t.is_completed } : t
+        ));
+    };
+
+    const updateTaskDescription = (taskId: string, description: string) => {
+        setJobTasks(jobTasks.map(t =>
+            t.id === taskId ? { ...t, description } : t
+        ));
+    };
+
+    const toggleTaskEditing = (taskId: string) => {
+        setJobTasks(jobTasks.map(t =>
+            t.id === taskId ? { ...t, isEditing: !t.isEditing } : t
+        ));
     };
 
     const getTimeSinceSubmission = (submittedAt: string | null) => {
@@ -431,7 +543,7 @@ export function SupervisorReviewPage() {
                                                 variant="outline"
                                                 size="sm"
                                                 className="flex-1 gap-1"
-                                                onClick={() => navigate(`/dashboard/workshop/jobs/${job.id}`)}
+                                                onClick={() => navigate(`/dashboard/workshop/${job.id}`)}
                                             >
                                                 <Eye size={14} />
                                                 عرض التفاصيل
@@ -508,38 +620,176 @@ export function SupervisorReviewPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Reject Dialog */}
+            {/* Reject Dialog - Enhanced with Task Management */}
             <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-                <DialogContent className="sm:max-w-md" dir="rtl">
+                <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-red-600">
                             <XCircle size={20} />
                             إرجاع أمر الشغل
                         </DialogTitle>
                         <DialogDescription>
-                            سيتم إعادة الأمر للفني لإجراء التعديلات المطلوبة
+                            يمكنك تعديل المهام قبل إرجاع الأمر للفني
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4">
-                        <div className="bg-muted rounded-lg p-3 mb-4">
+
+                    <div className="py-4 space-y-4">
+                        {/* Job Info */}
+                        <div className="bg-muted rounded-lg p-3">
                             <p className="font-semibold">{selectedJob?.vehicle?.make} {selectedJob?.vehicle?.model}</p>
                             <p className="text-sm text-muted-foreground font-mono">{selectedJob?.code}</p>
                         </div>
-                        <label className="text-sm font-medium">سبب الإرجاع *</label>
-                        <Textarea
-                            value={reviewNotes}
-                            onChange={(e) => setReviewNotes(e.target.value)}
-                            placeholder="اذكر سبب إرجاع الأمر والتعديلات المطلوبة..."
-                            className="mt-2"
-                            rows={3}
-                            required
-                        />
+
+                        {/* Tasks Section */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-medium flex items-center gap-2">
+                                    <Wrench size={16} />
+                                    المهام الحالية
+                                </label>
+                                <span className="text-xs text-muted-foreground">
+                                    {jobTasks.filter(t => !t.isDeleted).length} مهمة
+                                </span>
+                            </div>
+
+                            {isLoadingTasks ? (
+                                <div className="space-y-2">
+                                    {[1, 2].map(i => (
+                                        <Skeleton key={i} className="h-12 rounded-lg" />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                    {jobTasks.filter(t => !t.isDeleted).map((task) => (
+                                        <div
+                                            key={task.id}
+                                            className={cn(
+                                                "flex items-center gap-2 p-3 rounded-lg border transition-all",
+                                                task.isNew ? "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800" : "bg-card",
+                                                task.is_completed && "opacity-60"
+                                            )}
+                                        >
+                                            {/* Completion Toggle */}
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleTaskCompletion(task.id)}
+                                                className={cn(
+                                                    "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
+                                                    task.is_completed
+                                                        ? "bg-green-500 border-green-500 text-white"
+                                                        : "border-muted-foreground/30 hover:border-primary"
+                                                )}
+                                            >
+                                                {task.is_completed && <CheckCircle2 size={12} />}
+                                            </button>
+
+                                            {/* Task Description */}
+                                            {task.isEditing ? (
+                                                <Input
+                                                    value={task.description}
+                                                    onChange={(e) => updateTaskDescription(task.id, e.target.value)}
+                                                    onBlur={() => toggleTaskEditing(task.id)}
+                                                    onKeyDown={(e) => e.key === 'Enter' && toggleTaskEditing(task.id)}
+                                                    className="flex-1 h-8 text-sm"
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <span
+                                                    className={cn(
+                                                        "flex-1 text-sm",
+                                                        task.is_completed && "line-through text-muted-foreground"
+                                                    )}
+                                                >
+                                                    {task.description}
+                                                </span>
+                                            )}
+
+                                            {/* Action Buttons */}
+                                            <div className="flex items-center gap-1">
+                                                {task.is_completed && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                                                        onClick={() => toggleTaskCompletion(task.id)}
+                                                        title="إعادة فتح المهمة"
+                                                    >
+                                                        <RotateCcw size={14} />
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                                    onClick={() => toggleTaskEditing(task.id)}
+                                                    title="تعديل"
+                                                >
+                                                    <Edit3 size={14} />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                                    onClick={() => deleteTask(task.id)}
+                                                    title="حذف"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {jobTasks.filter(t => !t.isDeleted).length === 0 && (
+                                        <p className="text-center text-sm text-muted-foreground py-4">
+                                            لا توجد مهام
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Add New Task */}
+                            <div className="flex gap-2">
+                                <Input
+                                    value={newTaskDescription}
+                                    onChange={(e) => setNewTaskDescription(e.target.value)}
+                                    placeholder="أضف مهمة جديدة..."
+                                    className="flex-1"
+                                    onKeyDown={(e) => e.key === 'Enter' && addNewTask()}
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={addNewTask}
+                                    disabled={!newTaskDescription.trim()}
+                                    className="shrink-0"
+                                >
+                                    <Plus size={16} />
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Review Notes */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">سبب الإرجاع *</label>
+                            <Textarea
+                                value={reviewNotes}
+                                onChange={(e) => setReviewNotes(e.target.value)}
+                                placeholder="اذكر سبب إرجاع الأمر والتعديلات المطلوبة..."
+                                rows={3}
+                                required
+                            />
+                        </div>
                     </div>
+
                     <DialogFooter className="flex-row-reverse gap-2">
                         <Button
                             variant="destructive"
                             onClick={() => selectedJob && rejectMutation.mutate(selectedJob.id)}
-                            disabled={rejectMutation.isPending || !reviewNotes.trim()}
+                            disabled={rejectMutation.isPending || (!reviewNotes.trim() && !jobTasks.some(t => t.isNew && !t.isDeleted) && !jobTasks.some(t => t.isDeleted && !t.isNew))}
                             className="gap-2"
                         >
                             {rejectMutation.isPending ? 'جاري الإرجاع...' : (

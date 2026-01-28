@@ -52,7 +52,7 @@ interface VehicleAssessment {
         year: number | null;
         color: string | null;
     } | null;
-    job_order?: { id: string } | null;
+    job_order?: { id: string; status: string } | null;
     job_orders_count?: number;
 }
 
@@ -74,6 +74,40 @@ const STATUS_CONFIG: Record<AssessmentStatus, { label: string; color: string; bg
         color: 'text-green-700 dark:text-green-400',
         bgColor: 'bg-green-100 dark:bg-green-900/30',
         icon: Wrench
+    },
+};
+
+// Job Order Status Config - for displaying more accurate status when job order exists
+const JOB_ORDER_STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
+    assigned: {
+        label: 'تم التعيين',
+        color: 'text-blue-700 dark:text-blue-400',
+        bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+        icon: Clock
+    },
+    in_progress: {
+        label: 'قيد العمل',
+        color: 'text-green-700 dark:text-green-400',
+        bgColor: 'bg-green-100 dark:bg-green-900/30',
+        icon: Wrench
+    },
+    review: {
+        label: 'بانتظار المراجعة',
+        color: 'text-purple-700 dark:text-purple-400',
+        bgColor: 'bg-purple-100 dark:bg-purple-900/30',
+        icon: CheckCircle2
+    },
+    completed: {
+        label: 'مكتمل - جاهز للتسليم',
+        color: 'text-emerald-700 dark:text-emerald-400',
+        bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
+        icon: CheckCircle2
+    },
+    rejected: {
+        label: 'مرفوض - يحتاج مراجعة',
+        color: 'text-red-700 dark:text-red-400',
+        bgColor: 'bg-red-100 dark:bg-red-900/30',
+        icon: Clock
     },
 };
 
@@ -106,7 +140,7 @@ export function WorkshopPage() {
           fuel_level, mileage_in, created_at,
           customer:customers (id, name, phone),
           vehicle:vehicles (id, plate_number, make, model, year, color),
-          job_order:job_orders (id)
+          job_order:job_orders (id, status)
         `)
                 .order('created_at', { ascending: false })
                 .limit(50);
@@ -123,13 +157,25 @@ export function WorkshopPage() {
             const { data, error } = await query;
             if (error) throw error;
 
-            return data.map(a => ({
+            // Transform and filter out assessments with completed/delivered job orders
+            const transformedData = data.map(a => ({
                 ...a,
                 customer: Array.isArray(a.customer) ? a.customer[0] : a.customer,
                 vehicle: Array.isArray(a.vehicle) ? a.vehicle[0] : a.vehicle,
                 job_order: Array.isArray(a.job_order) ? a.job_order[0] : a.job_order,
-            })) as VehicleAssessment[];
+            }));
+
+            // Filter out assessments where job_order status is delivered (car has left)
+            // 'completed' means work is done but car is still in workshop - show it
+            return transformedData.filter(a => {
+                if (!a.job_order) return true; // No job order, show it
+                const jobStatus = a.job_order.status;
+                // Only hide if car was delivered (left the workshop)
+                return jobStatus !== 'delivered';
+            }) as VehicleAssessment[];
         },
+        staleTime: 0, // Always consider data stale to ensure fresh status
+        refetchOnMount: 'always', // Always refetch when component mounts
     });
 
     // Real-time updates
@@ -277,8 +323,12 @@ export function WorkshopPage() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredAssessments.map((assessment) => {
-                        const statusConfig = STATUS_CONFIG[assessment.status];
-                        const StatusIcon = statusConfig.icon;
+                        // Use job order status if available, otherwise assessment status
+                        const hasJobOrder = assessment.job_order?.status;
+                        const displayConfig = hasJobOrder
+                            ? (JOB_ORDER_STATUS_CONFIG[assessment.job_order!.status] || STATUS_CONFIG[assessment.status])
+                            : STATUS_CONFIG[assessment.status];
+                        const StatusIcon = displayConfig.icon;
 
                         return (
                             <Card
@@ -295,11 +345,11 @@ export function WorkshopPage() {
                             >
                                 <CardContent className="p-0">
                                     {/* Status Header */}
-                                    <div className={cn("px-4 py-2 flex items-center justify-between", statusConfig.bgColor)}>
+                                    <div className={cn("px-4 py-2 flex items-center justify-between", displayConfig.bgColor)}>
                                         <div className="flex items-center gap-2">
-                                            <StatusIcon size={16} className={statusConfig.color} />
-                                            <span className={cn("text-sm font-medium", statusConfig.color)}>
-                                                {statusConfig.label}
+                                            <StatusIcon size={16} className={displayConfig.color} />
+                                            <span className={cn("text-sm font-medium", displayConfig.color)}>
+                                                {displayConfig.label}
                                             </span>
                                         </div>
                                         <Badge variant="outline" className="text-xs bg-white/80 dark:bg-gray-900/80">

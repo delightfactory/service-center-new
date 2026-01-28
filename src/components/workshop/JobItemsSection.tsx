@@ -15,7 +15,10 @@ interface JobItemsSectionProps {
     items: JobItem[];
     onAddItem: () => void;
     onEditItem: (item: JobItem) => void;
+
     onDeleteItem: (itemId: string) => void;
+    onDispense?: () => void;
+    isDispensing?: boolean;
 }
 
 export function JobItemsSection({
@@ -23,6 +26,8 @@ export function JobItemsSection({
     onAddItem,
     onEditItem,
     onDeleteItem,
+    onDispense,
+    isDispensing,
 }: JobItemsSectionProps) {
     // حساب الإجماليات
     const totals = React.useMemo(() => {
@@ -36,6 +41,12 @@ export function JobItemsSection({
         return { labor, parts, total };
     }, [items]);
 
+    const hasUndispensedItems = items.some(i =>
+        !!i.product_id &&
+        (i.item_type === 'part' || i.item_type === 'consumable') &&
+        !i.is_dispensed
+    );
+
     return (
         <Card>
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
@@ -43,10 +54,23 @@ export function JobItemsSection({
                     <Package size={18} />
                     البنود
                 </CardTitle>
-                <Button size="sm" onClick={onAddItem}>
-                    <Plus size={14} className="ml-1" />
-                    إضافة بند
-                </Button>
+                <div className="flex items-center gap-2">
+                    {onDispense && hasUndispensedItems && (
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={onDispense}
+                            disabled={isDispensing}
+                            className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200"
+                        >
+                            {isDispensing ? 'جاري الصرف...' : 'صرف القطع'}
+                        </Button>
+                    )}
+                    <Button size="sm" onClick={onAddItem}>
+                        <Plus size={14} className="ml-1" />
+                        إضافة بند
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent>
                 {items.length === 0 ? (
@@ -60,6 +84,12 @@ export function JobItemsSection({
                                 <div className="flex items-center gap-2">
                                     <Badge variant="outline" className="text-xs">{JOB_ITEM_TYPES[item.item_type]}</Badge>
                                     <span className="text-sm">{item.description}</span>
+                                    {item.is_dispensed && (
+                                        <Badge variant="secondary" className="text-[10px] h-5 bg-green-100 text-green-700 hover:bg-green-100 flex items-center gap-1">
+                                            <Package size={10} />
+                                            تم الصرف
+                                        </Badge>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <span className="text-sm font-semibold">{formatCurrency(item.total_price)}</span>

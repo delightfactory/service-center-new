@@ -342,6 +342,9 @@ export function InvoiceDetailsPage() {
     const partyName = invoice.customer?.name || invoice.supplier?.name || '-';
     const partyType = invoice.customer ? 'عميل' : 'مورد';
     const canAddPayment = invoice.remaining_amount > 0 && invoice.status !== 'cancelled';
+    const isSupplierInvoice = invoice.invoice_type === 'purchase' || invoice.invoice_type === 'purchase_return';
+    const paymentButtonLabel = isSupplierInvoice ? 'دفع للمورد' : 'استلام دفعة';
+    const paymentDialogTitle = isSupplierInvoice ? 'دفع للمورد' : 'استلام دفعة';
 
     return (
         <div className="space-y-6">
@@ -359,7 +362,7 @@ export function InvoiceDetailsPage() {
                         {canAddPayment && (
                             <Button onClick={openPaymentDialog}>
                                 <Plus size={16} className="ml-2" />
-                                استلام دفعة
+                                {paymentButtonLabel}
                             </Button>
                         )}
                     </div>
@@ -520,7 +523,7 @@ export function InvoiceDetailsPage() {
                                     {canAddPayment && (
                                         <Button className="mt-4" onClick={openPaymentDialog}>
                                             <Plus size={16} className="ml-2" />
-                                            استلام دفعة
+                                            {paymentButtonLabel}
                                         </Button>
                                     )}
                                 </div>
@@ -576,7 +579,7 @@ export function InvoiceDetailsPage() {
             <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
                 <DialogContent className="sm:max-w-md" dir="rtl">
                     <DialogHeader>
-                        <DialogTitle>استلام دفعة</DialogTitle>
+                        <DialogTitle>{paymentDialogTitle}</DialogTitle>
                         <DialogDescription>
                             المتبقي: {formatCurrency(invoice.remaining_amount)}
                         </DialogDescription>

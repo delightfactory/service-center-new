@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     ArrowRight, Car, User, Phone, Clock, CheckCircle2,
     XCircle, AlertTriangle, PlayCircle, PauseCircle, FileText,
-    Send, PartyPopper
+    Send, PartyPopper, RefreshCw
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -187,7 +187,7 @@ export function TechJobDetailsPage() {
             const { data, error } = await supabase
                 .from('job_orders')
                 .select(`
-                    id, code, status, priority, manager_instructions, notes,
+                    id, code, status, priority, manager_instructions, notes, review_notes,
                     vehicle:vehicles (id, plate_number, make, model, year, color),
                     customer:customers (id, name, phone)
                 `)
@@ -265,17 +265,31 @@ export function TechJobDetailsPage() {
         enabled: !!id && !!profile?.id,
     });
 
-    // Smart Auto-Clock: Show prompt if not clocked in
+    // Smart Auto-Clock: Show prompt if not clocked in and job is active (improved logic)
     useEffect(() => {
-        if (!isLoading && job && !activeTimeLog && !hasShownAutoClockPrompt && job.status !== 'review') {
-            // Delay to allow the page to render first
-            const timer = setTimeout(() => {
-                setShowAutoClockPrompt(true);
-                setHasShownAutoClockPrompt(true);
-            }, 500);
-            return () => clearTimeout(timer);
+        if (!isLoading && job && !activeTimeLog && !hasShownAutoClockPrompt && totalPreviousSeconds !== undefined) {
+            // Check if already dismissed for this job (persisted per job)
+            const dismissedKey = `auto-clock-dismissed-${id}`;
+            const wasDismissed = sessionStorage.getItem(dismissedKey);
+            if (wasDismissed) return;
+
+            // Only show for active jobs (in_progress or assigned)
+            const activeStatuses = ['assigned', 'in_progress'];
+            const isJobActive = activeStatuses.includes(job.status);
+
+            // Don't show if technician already has logged time on this job
+            const hasWorkedBefore = (totalPreviousSeconds || 0) > 0;
+
+            if (isJobActive && !hasWorkedBefore) {
+                // Delay to allow the page to render first
+                const timer = setTimeout(() => {
+                    setShowAutoClockPrompt(true);
+                    setHasShownAutoClockPrompt(true);
+                }, 800);
+                return () => clearTimeout(timer);
+            }
         }
-    }, [isLoading, job, activeTimeLog, hasShownAutoClockPrompt]);
+    }, [isLoading, job, activeTimeLog, hasShownAutoClockPrompt, totalPreviousSeconds, id]);
 
     // Toggle task completion with haptic
     const toggleTaskMutation = useMutation({
@@ -534,8 +548,8 @@ export function TechJobDetailsPage() {
                     )}
                 </div>
 
-                {/* All Tasks Completed + Request Review */}
-                {allTasksCompleted && !isFinished && (
+                {/* All Tasks Completed + Request Review - Hide when job was returned with review notes */}
+                {allTasksCompleted && !isFinished && !job.review_notes && (
                     <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-2xl border border-green-200 dark:border-green-800 p-6 text-center">
                         <div className="w-16 h-16 mx-auto mb-4 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center">
                             <PartyPopper size={32} className="text-green-600" />
@@ -554,6 +568,30 @@ export function TechJobDetailsPage() {
                         >
                             <Send size={20} />
                             طلب مراجعة المشرف
+                        </Button>
+                    </div>
+                )}
+
+                {/* Re-submit for Review - When job was returned with notes and corrections are done */}
+                {allTasksCompleted && !isFinished && job.review_notes && (
+                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-2xl border border-blue-200 dark:border-blue-800 p-6 text-center">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center">
+                            <RefreshCw size={32} className="text-blue-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-blue-800 dark:text-blue-300 mb-2">
+                            ✅ تم إتمام التعديلات المطلوبة
+                        </h3>
+                        <p className="text-base text-blue-700 dark:text-blue-400 mb-4">
+                            يمكنك الآن إعادة إرسال الأمر للمراجعة
+                        </p>
+                        <Button
+                            size="lg"
+                            className="w-full h-14 text-lg font-semibold rounded-xl gap-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg"
+                            onClick={() => requestReviewMutation.mutate()}
+                            disabled={requestReviewMutation.isPending}
+                        >
+                            <Send size={20} />
+                            إعادة الإرسال للمراجعة
                         </Button>
                     </div>
                 )}
@@ -597,6 +635,25 @@ export function TechJobDetailsPage() {
                         )}
                     </div>
                 </div>
+
+                {/* Review Notes - ملاحظات الإرجاع من المشرف */}
+                {job.review_notes && (
+                    <div className="bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30 rounded-2xl border-2 border-red-300 dark:border-red-700 p-5 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-red-200 dark:bg-red-900/50 rounded-xl flex items-center justify-center shrink-0">
+                                <AlertTriangle size={24} className="text-red-700 dark:text-red-400" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-base font-bold text-red-800 dark:text-red-300 mb-2">
+                                    ⚠️ ملاحظات المشرف - يرجى المراجعة
+                                </p>
+                                <p className="text-lg text-red-900 dark:text-red-200 leading-relaxed font-medium">
+                                    {job.review_notes}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Manager Instructions - Enhanced visibility */}
                 {job.manager_instructions && (
@@ -754,7 +811,10 @@ export function TechJobDetailsPage() {
                         <Button
                             size="lg"
                             variant="outline"
-                            onClick={() => setShowAutoClockPrompt(false)}
+                            onClick={() => {
+                                sessionStorage.setItem(`auto-clock-dismissed-${id}`, 'true');
+                                setShowAutoClockPrompt(false);
+                            }}
                             className="flex-1 h-12 text-lg"
                         >
                             لاحقاً

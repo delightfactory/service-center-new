@@ -41,6 +41,7 @@ import {
     type AssignedTech,
     type LinkedInvoice,
 } from '@/components/workshop';
+import { jobOrderService } from '@/lib/services/operations/job-order.service';
 import type { JobStatus } from '@/types/enums';
 
 // ============================================================
@@ -242,6 +243,21 @@ export function JobOrderDetailsPage() {
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['job-tasks', id] }),
     });
 
+    const dispenseItemsMutation = useMutation({
+        mutationFn: async () => {
+            if (!id) return;
+            await jobOrderService.dispenseItems(id);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['job-items', id] });
+            alert('تم صرف القطع بنجاح');
+        },
+        onError: (error: Error) => {
+            console.error('Dispense error:', error);
+            alert(error.message || 'فشل صرف القطع');
+        }
+    });
+
     const updateStatusMutation = useMutation({
         mutationFn: async (newStatus: JobStatus) => {
             const updates: Record<string, any> = { status: newStatus };
@@ -414,6 +430,8 @@ export function JobOrderDetailsPage() {
                                 onAddItem={() => setShowAddItemModal(true)}
                                 onEditItem={(item) => { setEditingItem(item); setShowEditItemModal(true); }}
                                 onDeleteItem={(itemId) => deleteItemMutation.mutate(itemId)}
+                                onDispense={() => dispenseItemsMutation.mutate()}
+                                isDispensing={dispenseItemsMutation.isPending}
                             />
                         </TabsContent>
                         <TabsContent value="details" className="mt-4">

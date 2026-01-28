@@ -257,7 +257,7 @@ export function WarehouseTransfersPage() {
                     .select('quantity')
                     .eq('product_id', item.product_id)
                     .eq('warehouse_id', fromWarehouseId)
-                    .single();
+                    .maybeSingle();
 
                 const sourceQty = sourceItem?.quantity || 0;
                 if (item.quantity > sourceQty) {
@@ -287,7 +287,7 @@ export function WarehouseTransfersPage() {
                     .select('quantity')
                     .eq('product_id', item.product_id)
                     .eq('warehouse_id', toWarehouseId)
-                    .single();
+                    .maybeSingle();
 
                 const destQty = destItem?.quantity || 0;
 

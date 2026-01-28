@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -101,7 +100,6 @@ export function AddJobItemModal({
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState<ProductType | 'all'>('all');
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-    const [selectedComponents, setSelectedComponents] = useState<Map<string, { selected: boolean; quantity: number }>>(new Map());
     const [manualForm, setManualForm] = useState<ManualItemForm>(initialManualForm);
     const [productQuantity, setProductQuantity] = useState(1);
     const [productDiscount, setProductDiscount] = useState(0);
@@ -146,19 +144,25 @@ export function AddJobItemModal({
         enabled: !!selectedProduct?.is_composite,
     });
 
-    // Initialize component selections when components load
-    React.useEffect(() => {
-        if (serviceComponents) {
-            const newMap = new Map<string, { selected: boolean; quantity: number }>();
-            serviceComponents.forEach(sc => {
-                newMap.set(sc.id, {
-                    selected: !sc.is_optional, // auto-select mandatory
-                    quantity: sc.quantity
-                });
+    // Fetch inventory totals
+    const { data: inventoryTotals } = useQuery({
+        queryKey: ['inventory-totals-modal'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('inventory_items')
+                .select('product_id, quantity, reserved_quantity');
+            if (error) throw error;
+
+            const totals = new Map<string, number>();
+            (data || []).forEach(item => {
+                const current = totals.get(item.product_id) || 0;
+                const available = Math.max(0, item.quantity - (item.reserved_quantity ?? 0));
+                totals.set(item.product_id, current + available);
             });
-            setSelectedComponents(newMap);
-        }
-    }, [serviceComponents]);
+            return totals;
+        },
+        enabled: open,
+    });
 
     // Filter products
     const filteredProducts = useMemo(() => {
@@ -205,24 +209,6 @@ export function AddJobItemModal({
                     notes: null,
                 });
 
-                // Add selected components if composite service
-                if (selectedProduct.is_composite && serviceComponents) {
-                    serviceComponents.forEach(sc => {
-                        const selection = selectedComponents.get(sc.id);
-                        if (selection?.selected && sc.component) {
-                            items.push({
-                                job_order_id: jobOrderId,
-                                product_id: sc.component.id,
-                                item_type: PRODUCT_TYPE_MAP[sc.component.product_type],
-                                description: sc.component.name,
-                                quantity: selection.quantity,
-                                unit_price: sc.component.selling_price,
-                                discount_percent: 0,
-                                notes: `ضمن خدمة: ${selectedProduct.name}`,
-                            });
-                        }
-                    });
-                }
             } else if (activeTab === 'manual') {
                 items.push({
                     job_order_id: jobOrderId,
@@ -263,7 +249,6 @@ export function AddJobItemModal({
         setSearch('');
         setTypeFilter('all');
         setSelectedProduct(null);
-        setSelectedComponents(new Map());
         setManualForm(initialManualForm);
         setProductQuantity(1);
         setProductDiscount(0);
@@ -275,6 +260,16 @@ export function AddJobItemModal({
             setError('يرجى اختيار منتج أو خدمة');
             return;
         }
+
+        // Validate stock
+        if (activeTab === 'products' && selectedProduct?.is_trackable) {
+            const stock = inventoryTotals?.get(selectedProduct.id) || 0;
+            if (productQuantity > stock) {
+                setError(`الكمية المطلوبة (${productQuantity}) أكبر من المتوفر (${stock})`);
+                return;
+            }
+        }
+
         if (activeTab === 'manual' && !manualForm.description.trim()) {
             setError('يرجى إدخال وصف البند');
             return;
@@ -347,39 +342,60 @@ export function AddJobItemModal({
                                         <div className="p-8 text-center text-muted-foreground">لا توجد منتجات</div>
                                     ) : (
                                         <div className="divide-y">
-                                            {filteredProducts.map((product) => (
-                                                <div
-                                                    key={product.id}
-                                                    className="p-3 flex items-center justify-between hover:bg-muted/50 cursor-pointer transition-colors"
-                                                    onClick={() => setSelectedProduct(product)}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={cn(
-                                                            "w-10 h-10 rounded-lg flex items-center justify-center",
-                                                            product.product_type === 'part' && "bg-green-100 text-green-600",
-                                                            product.product_type === 'consumable' && "bg-orange-100 text-orange-600",
-                                                            product.product_type === 'service' && "bg-blue-100 text-blue-600"
-                                                        )}>
-                                                            {product.product_type === 'part' && <Package size={20} />}
-                                                            {product.product_type === 'consumable' && <Settings size={20} />}
-                                                            {product.product_type === 'service' && <Wrench size={20} />}
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-medium">{product.name}</p>
-                                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                                {product.code && <span>{product.code}</span>}
-                                                                {product.is_composite && (
-                                                                    <Badge variant="secondary" className="text-xs">مركبة</Badge>
-                                                                )}
+                                            {filteredProducts.map((product) => {
+                                                const availableStock = inventoryTotals?.get(product.id) || 0;
+                                                const isOutOfStock = product.is_trackable && availableStock <= 0;
+
+                                                return (
+                                                    <div
+                                                        key={product.id}
+                                                        className={cn(
+                                                            "p-3 flex items-center justify-between hover:bg-muted/50 cursor-pointer transition-colors",
+                                                            isOutOfStock && "opacity-60 grayscale"
+                                                        )}
+                                                        onClick={() => {
+                                                            if (isOutOfStock) {
+                                                                alert('هذا المنتج غير متوفر في المخزون');
+                                                                return;
+                                                            }
+                                                            setSelectedProduct(product);
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={cn(
+                                                                "w-10 h-10 rounded-lg flex items-center justify-center",
+                                                                product.product_type === 'part' && "bg-green-100 text-green-600",
+                                                                product.product_type === 'consumable' && "bg-orange-100 text-orange-600",
+                                                                product.product_type === 'service' && "bg-blue-100 text-blue-600"
+                                                            )}>
+                                                                {product.product_type === 'part' && <Package size={20} />}
+                                                                {product.product_type === 'consumable' && <Settings size={20} />}
+                                                                {product.product_type === 'service' && <Wrench size={20} />}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-medium">{product.name}</p>
+                                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                                    {product.code && <span>{product.code}</span>}
+                                                                    {product.is_composite && (
+                                                                        <Badge variant="secondary" className="text-xs">مركبة</Badge>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
+                                                        <div className="text-left">
+                                                            <p className="font-bold">{product.selling_price.toLocaleString('ar-EG')} ج.م</p>
+                                                            {product.is_trackable && (
+                                                                <p className={cn(
+                                                                    "text-xs font-medium",
+                                                                    availableStock > 0 ? "text-green-600" : "text-destructive"
+                                                                )}>
+                                                                    {availableStock > 0 ? `متوفر: ${availableStock}` : 'غير متوفر'}
+                                                                </p>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    <div className="text-left">
-                                                        <p className="font-bold">{product.selling_price.toLocaleString('ar-EG')} ج.م</p>
-                                                        <ChevronLeft size={16} className="text-muted-foreground mr-auto" />
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>
@@ -435,45 +451,21 @@ export function AddJobItemModal({
                                     <div className="space-y-2">
                                         <Label>مكونات الخدمة</Label>
                                         <div className="border rounded-lg divide-y max-h-40 overflow-y-auto">
-                                            {serviceComponents.map((sc) => {
-                                                const selection = selectedComponents.get(sc.id);
-                                                return (
-                                                    <div key={sc.id} className="p-2 flex items-center gap-3">
-                                                        <Checkbox
-                                                            checked={selection?.selected ?? !sc.is_optional}
-                                                            onCheckedChange={(checked: boolean) => {
-                                                                const newMap = new Map(selectedComponents);
-                                                                newMap.set(sc.id, {
-                                                                    selected: !!checked,
-                                                                    quantity: selection?.quantity ?? sc.quantity
-                                                                });
-                                                                setSelectedComponents(newMap);
-                                                            }}
-                                                        />
-                                                        <div className="flex-1">
-                                                            <p className="text-sm font-medium">{sc.component?.name}</p>
-                                                            {sc.is_optional && (
-                                                                <Badge variant="outline" className="text-xs">اختياري</Badge>
-                                                            )}
-                                                        </div>
-                                                        <Input
-                                                            type="number"
-                                                            className="w-16 text-center"
-                                                            value={selection?.quantity ?? sc.quantity}
-                                                            onChange={(e) => {
-                                                                const newMap = new Map(selectedComponents);
-                                                                newMap.set(sc.id, {
-                                                                    selected: selection?.selected ?? !sc.is_optional,
-                                                                    quantity: parseFloat(e.target.value) || 1
-                                                                });
-                                                                setSelectedComponents(newMap);
-                                                            }}
-                                                            dir="ltr"
-                                                        />
+                                            {serviceComponents.map((sc) => (
+                                                <div key={sc.id} className="p-2 flex items-center justify-between text-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-medium">{sc.component?.name}</span>
+                                                        {sc.is_optional && (
+                                                            <Badge variant="outline" className="text-xs">اختياري</Badge>
+                                                        )}
                                                     </div>
-                                                );
-                                            })}
+                                                    <span className="text-muted-foreground">x{sc.quantity}</span>
+                                                </div>
+                                            ))}
                                         </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            يتم صرف المكونات تلقائياً عند الصرف بناءً على تعريف الخدمة.
+                                        </p>
                                     </div>
                                 )}
 

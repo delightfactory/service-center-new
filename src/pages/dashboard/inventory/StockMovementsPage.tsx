@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     ArrowDownCircle, ArrowUpCircle, ArrowRightLeft, Search, Package,
-    Filter, Calendar, Warehouse, RefreshCw, AlertTriangle
+    Filter, Calendar, Warehouse, RefreshCw, AlertTriangle, Car
 } from 'lucide-react';
 import {
     Select,
@@ -51,7 +51,7 @@ interface InventoryTransaction {
     balance_after: number | null;
     notes: string | null;
     created_at: string;
-    product?: { id: string; name: string; sku: string };
+    product?: { id: string; name: string; barcode: string | null };
     warehouse?: { id: string; name: string };
 }
 
@@ -93,7 +93,7 @@ export function StockMovementsPage() {
                 .select(`
                     id, code, transaction_type, quantity, unit_cost, total_cost,
                     balance_before, balance_after, notes, created_at,
-                    product_id, warehouse_id
+                    product_id, warehouse_id, reference_type, reference_id
                 `)
                 .order('created_at', { ascending: false })
                 .limit(200);
@@ -107,19 +107,37 @@ export function StockMovementsPage() {
             const productIds = [...new Set((data || []).map(t => t.product_id).filter(Boolean))];
             const warehouseIds = [...new Set((data || []).map(t => t.warehouse_id).filter(Boolean))];
 
-            let productsMap = new Map<string, { id: string; name: string; sku: string }>();
-            let warehousesMap = new Map<string, { id: string; name: string }>();
+            // Get job item reference IDs for job-related transactions (job_consumption, job_return, etc)
+            const isJobRelated = (t: any) =>
+                t.reference_type === 'job_item' ||
+                t.transaction_type === 'job_consumption' ||
+                t.transaction_type === 'job_return';
 
-            // Fetch products - handle errors gracefully
+            const jobItemIds = [...new Set((data || [])
+                .filter(t => isJobRelated(t) && t.reference_id)
+                .map(t => t.reference_id)
+            )];
+
+            let productsMap = new Map<string, { id: string; name: string; barcode: string | null }>();
+            let warehousesMap = new Map<string, { id: string; name: string }>();
+            let jobItemToOrderMap = new Map<string, { id: string; code: string; vehicle: { plate_number: string } | null }>();
+
+            // Fetch products - batch in chunks of 10 to avoid URL length limit
             if (productIds.length > 0) {
-                try {
-                    const { data: productsData } = await supabase
+                const chunkSize = 10;
+                for (let i = 0; i < productIds.length; i += chunkSize) {
+                    const chunk = productIds.slice(i, i + chunkSize);
+                    const { data: productsData, error: prodError } = await supabase
                         .from('products')
-                        .select('id, name, sku')
-                        .in('id', productIds);
-                    productsMap = new Map((productsData || []).map(p => [p.id, p]));
-                } catch (err) {
-                    console.warn('Could not fetch product names:', err);
+                        .select('id, name, barcode')
+                        .in('id', chunk);
+
+                    if (prodError) {
+                        console.warn('Error fetching products chunk:', prodError.message);
+                        continue;
+                    }
+
+                    (productsData || []).forEach(p => productsMap.set(p.id, p));
                 }
             }
 
@@ -136,11 +154,36 @@ export function StockMovementsPage() {
                 }
             }
 
-            return (data || []).map(t => ({
-                ...t,
-                product: productsMap.get(t.product_id) || { id: t.product_id, name: 'منتج محذوف', sku: '-' },
-                warehouse: warehousesMap.get(t.warehouse_id) || { id: t.warehouse_id, name: 'مخزن محذوف' },
-            })) as InventoryTransaction[];
+            // Fetch job items with their job orders and vehicles
+            if (jobItemIds.length > 0) {
+                try {
+                    const { data: jobItemsData } = await supabase
+                        .from('job_items')
+                        .select('id, job_order:job_orders(id, code, vehicle:vehicles(plate_number))')
+                        .in('id', jobItemIds);
+                    (jobItemsData || []).forEach((ji: any) => {
+                        if (ji.job_order) {
+                            jobItemToOrderMap.set(ji.id, ji.job_order);
+                        }
+                    });
+                } catch (err) {
+                    console.warn('Could not fetch job items:', err);
+                }
+            }
+
+            return (data || []).map(t => {
+                // Get job order info from job_item reference
+                const jobOrder = (t.reference_type === 'job_item' || t.transaction_type === 'job_consumption' || t.transaction_type === 'job_return') && t.reference_id
+                    ? jobItemToOrderMap.get(t.reference_id) || null
+                    : null;
+
+                return {
+                    ...t,
+                    product: productsMap.get(t.product_id) || { id: t.product_id, name: 'منتج محذوف', barcode: null },
+                    warehouse: warehousesMap.get(t.warehouse_id) || { id: t.warehouse_id, name: 'مخزن محذوف' },
+                    jobOrder,
+                };
+            }) as (InventoryTransaction & { jobOrder?: { id: string; code: string; vehicle: { plate_number: string } | null } | null })[];
         },
     });
 
@@ -178,7 +221,7 @@ export function StockMovementsPage() {
                 return (
                     tx.code?.toLowerCase().includes(query) ||
                     tx.product?.name?.toLowerCase().includes(query) ||
-                    tx.product?.sku?.toLowerCase().includes(query)
+                    tx.product?.barcode?.toLowerCase().includes(query)
                 );
             }
 
@@ -337,6 +380,7 @@ export function StockMovementsPage() {
                                         <TableHead>الكود</TableHead>
                                         <TableHead>النوع</TableHead>
                                         <TableHead>المنتج</TableHead>
+                                        <TableHead>السيارة/المرجع</TableHead>
                                         <TableHead>المخزن</TableHead>
                                         <TableHead>الكمية</TableHead>
                                         <TableHead>الرصيد قبل</TableHead>
@@ -364,10 +408,27 @@ export function StockMovementsPage() {
                                                 <TableCell>
                                                     <div>
                                                         <p className="font-medium truncate max-w-[200px]">{tx.product?.name || '-'}</p>
-                                                        {tx.product?.sku && (
-                                                            <p className="text-xs text-muted-foreground font-mono">{tx.product.sku}</p>
+                                                        {tx.product?.barcode && (
+                                                            <p className="text-xs text-muted-foreground font-mono">{tx.product.barcode}</p>
                                                         )}
                                                     </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {(tx as any).jobOrder ? (
+                                                        <div className="flex items-center gap-1">
+                                                            <Car size={14} className="text-blue-500" />
+                                                            <div>
+                                                                <p className="text-sm font-medium">
+                                                                    {(tx as any).jobOrder.vehicle?.plate_number || '-'}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground font-mono">
+                                                                    {(tx as any).jobOrder.code}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">-</span>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-1">

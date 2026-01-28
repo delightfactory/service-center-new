@@ -235,7 +235,9 @@ export const InvoicePrintTemplate = forwardRef<HTMLDivElement, InvoicePrintProps
                 )}
 
                 {/* Footer */}
-                <PrintFooter message="شكراً لتعاملكم معنا" />
+                <PrintFooter message="برجاء التنويه
+نحيط بسيادتكم بان الرقم الآتي هو فقط المسؤول عن الدفع انستا باي وفودافون كاش 
+م/شادي سالم :01226010214" />
             </PrintContainer>
         );
     }

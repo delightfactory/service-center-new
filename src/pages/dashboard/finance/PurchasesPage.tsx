@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
 import {
     Card,
@@ -133,17 +134,18 @@ export function PurchasesPage() {
         },
     });
 
-    // Fetch products
+    // Fetch products (only parts and consumables, not services)
     const { data: products } = useQuery({
         queryKey: ['products-for-purchase'],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('products')
-                .select('id, code, name')
+                .select('id, code, name, product_type')
                 .eq('is_active', true)
+                .neq('product_type', 'service') // Exclude services from purchase
                 .order('name');
             if (error) throw error;
-            return data as Product[];
+            return data as (Product & { product_type: string })[];
         },
     });
 
@@ -505,31 +507,43 @@ export function PurchasesPage() {
                                                     {formatDate(invoice.created_at)}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                                <MoreVertical size={16} />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="start">
-                                                            <DropdownMenuItem className="gap-2">
-                                                                <Eye size={16} />
-                                                                عرض التفاصيل
-                                                            </DropdownMenuItem>
-                                                            {invoice.status === 'draft' && (
-                                                                <>
-                                                                    <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem
-                                                                        className="gap-2 text-green-600"
-                                                                        onClick={() => approveMutation.mutate(invoice.id)}
-                                                                    >
-                                                                        <Check size={16} />
-                                                                        اعتماد وإضافة للمخزون
-                                                                    </DropdownMenuItem>
-                                                                </>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                    <div className="flex items-center gap-1">
+                                                        {/* View button - always visible */}
+                                                        <Link
+                                                            to={`/dashboard/finance/invoices/${invoice.id}`}
+                                                            className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+                                                            title="عرض التفاصيل"
+                                                        >
+                                                            <Eye size={15} />
+                                                        </Link>
+
+                                                        {/* Approve button - only for draft */}
+                                                        {invoice.status === 'draft' && (
+                                                            <button
+                                                                onClick={() => approveMutation.mutate(invoice.id)}
+                                                                disabled={approveMutation.isPending}
+                                                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 transition-colors disabled:opacity-50"
+                                                                title="اعتماد وإضافة للمخزون"
+                                                            >
+                                                                <Check size={15} />
+                                                            </button>
+                                                        )}
+
+                                                        {/* Cancel button - only for draft */}
+                                                        {invoice.status === 'draft' && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (confirm('هل أنت متأكد من إلغاء هذه الفاتورة؟')) {
+                                                                        // TODO: add cancel mutation
+                                                                    }
+                                                                }}
+                                                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+                                                                title="إلغاء"
+                                                            >
+                                                                <X size={15} />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}

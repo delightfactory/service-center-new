@@ -4,6 +4,7 @@ import { Home, User, LogOut, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { NotificationsPopover } from '@/components/shared/NotificationsPopover';
 
 // ============================================================
 // Technician Layout - Professional Mobile-First Design
@@ -61,14 +62,17 @@ export function TechLayout() {
                             <p className="text-xs text-muted-foreground">فني صيانة</p>
                         </div>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleSignOut}
-                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    >
-                        <LogOut size={20} />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        <NotificationsPopover />
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleSignOut}
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        >
+                            <LogOut size={20} />
+                        </Button>
+                    </div>
                 </div>
             </header>
 

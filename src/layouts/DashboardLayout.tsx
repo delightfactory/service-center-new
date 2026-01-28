@@ -21,10 +21,12 @@ import {
     Car,
     BarChart3,
     ClipboardCheck,
+    ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { NotificationsPopover } from '@/components/shared/NotificationsPopover';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -131,6 +133,20 @@ export function DashboardLayout() {
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+    const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+
+    // Toggle expanded state for accordion menus
+    const toggleExpanded = (href: string) => {
+        setExpandedMenus(prev => {
+            const next = new Set(prev);
+            if (next.has(href)) {
+                next.delete(href);
+            } else {
+                next.add(href);
+            }
+            return next;
+        });
+    };
 
     // Redirect to login if not authenticated
     if (!loading && !isAuthenticated) {
@@ -221,43 +237,78 @@ export function DashboardLayout() {
                             const hasChildren = item.children && item.children.length > 0;
                             const isActive = isActiveLink(item.href);
                             const isChildActive = hasChildren && item.children?.some(child => isActiveLink(child.href));
-                            const isExpanded = isActive || isChildActive;
+                            const isExpanded = expandedMenus.has(item.href) || isActive || isChildActive;
 
                             return (
                                 <li key={item.href}>
-                                    <Link
-                                        to={item.href}
-                                        className={cn(
-                                            'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                                            (isActive && !isChildActive)
-                                                ? 'bg-primary/10 text-primary font-medium'
-                                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                                        )}
-                                        onClick={() => setMobileSidebarOpen(false)}
-                                    >
-                                        <item.icon size={20} />
-                                        {sidebarOpen && <span>{item.title}</span>}
-                                    </Link>
-                                    {/* Sub-items */}
-                                    {hasChildren && sidebarOpen && isExpanded && (
-                                        <ul className="mr-6 mt-1 space-y-1 border-r-2 border-primary/20 pr-3">
-                                            {item.children?.map((child) => (
-                                                <li key={child.href}>
-                                                    <Link
-                                                        to={child.href}
+                                    {/* Module with children: use button (accordion) */}
+                                    {hasChildren ? (
+                                        <button
+                                            onClick={() => toggleExpanded(item.href)}
+                                            className={cn(
+                                                'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors w-full text-right',
+                                                isChildActive
+                                                    ? 'bg-primary/10 text-primary font-medium'
+                                                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                                            )}
+                                        >
+                                            <item.icon size={20} />
+                                            {sidebarOpen && (
+                                                <>
+                                                    <span className="flex-1">{item.title}</span>
+                                                    <ChevronDown
+                                                        size={16}
                                                         className={cn(
-                                                            'block px-3 py-2 rounded-md text-sm transition-colors',
-                                                            isActiveLink(child.href)
-                                                                ? 'bg-primary/10 text-primary font-medium'
-                                                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                                                            'transition-transform duration-200',
+                                                            isExpanded && 'rotate-180'
                                                         )}
-                                                        onClick={() => setMobileSidebarOpen(false)}
-                                                    >
-                                                        {child.title}
-                                                    </Link>
-                                                </li>
-                                            ))}
-                                        </ul>
+                                                    />
+                                                </>
+                                            )}
+                                        </button>
+                                    ) : (
+                                        /* Module without children: use Link */
+                                        <Link
+                                            to={item.href}
+                                            className={cn(
+                                                'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
+                                                isActive
+                                                    ? 'bg-primary/10 text-primary font-medium'
+                                                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                                            )}
+                                            onClick={() => setMobileSidebarOpen(false)}
+                                        >
+                                            <item.icon size={20} />
+                                            {sidebarOpen && <span>{item.title}</span>}
+                                        </Link>
+                                    )}
+                                    {/* Sub-items with animation */}
+                                    {hasChildren && sidebarOpen && (
+                                        <div
+                                            className={cn(
+                                                'overflow-hidden transition-all duration-200',
+                                                isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                            )}
+                                        >
+                                            <ul className="mr-6 mt-1 space-y-1 border-r-2 border-primary/20 pr-3">
+                                                {item.children?.map((child) => (
+                                                    <li key={child.href}>
+                                                        <Link
+                                                            to={child.href}
+                                                            className={cn(
+                                                                'block px-3 py-2 rounded-md text-sm transition-colors',
+                                                                isActiveLink(child.href)
+                                                                    ? 'bg-primary/10 text-primary font-medium'
+                                                                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                                                            )}
+                                                            onClick={() => setMobileSidebarOpen(false)}
+                                                        >
+                                                            {child.title}
+                                                        </Link>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
                                     )}
                                 </li>
                             );
@@ -324,12 +375,8 @@ export function DashboardLayout() {
                     {/* Right side */}
                     <div className="flex items-center gap-2">
                         {/* Notifications */}
-                        <Button variant="ghost" size="icon" className="relative">
-                            <Bell size={20} />
-                            <span className="absolute -top-1 -left-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center">
-                                3
-                            </span>
-                        </Button>
+                        {/* Notifications */}
+                        <NotificationsPopover />
 
                         {/* User menu */}
                         <DropdownMenu>

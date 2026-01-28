@@ -4,13 +4,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
     Home,
     ListTodo,
-    Bell,
     User,
     Wifi,
     WifiOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { NotificationsPopover } from '@/components/shared/NotificationsPopover';
 
 export function TechnicianLayout() {
     const { user, profile, signOut, isAuthenticated, loading } = useAuth();
@@ -57,7 +57,6 @@ export function TechnicianLayout() {
     const navItems = [
         { icon: Home, label: 'الرئيسية', href: '/technician' },
         { icon: ListTodo, label: 'المهام', href: '/technician/tasks' },
-        { icon: Bell, label: 'الإشعارات', href: '/technician/notifications', badge: 3 },
         { icon: User, label: 'حسابي', href: '/technician/profile' },
     ];
 
@@ -104,15 +103,18 @@ export function TechnicianLayout() {
                         </div>
                     </div>
 
-                    {/* Connection status */}
-                    <div
-                        className={cn(
-                            'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
-                            isOnline ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
-                        )}
-                    >
-                        {isOnline ? <Wifi size={14} /> : <WifiOff size={14} />}
-                        <span>{isOnline ? 'متصل' : 'غير متصل'}</span>
+                    <div className="flex items-center gap-2">
+                        <NotificationsPopover />
+                        {/* Connection status */}
+                        <div
+                            className={cn(
+                                'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
+                                isOnline ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
+                            )}
+                        >
+                            {isOnline ? <Wifi size={14} /> : <WifiOff size={14} />}
+                            <span>{isOnline ? 'متصل' : 'غير متصل'}</span>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -138,11 +140,6 @@ export function TechnicianLayout() {
                         >
                             <div className="relative">
                                 <item.icon size={24} />
-                                {item.badge && item.badge > 0 && (
-                                    <span className="absolute -top-1 -left-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center">
-                                        {item.badge}
-                                    </span>
-                                )}
                             </div>
                             <span className="text-xs">{item.label}</span>
                             {isActive(item.href) && (
