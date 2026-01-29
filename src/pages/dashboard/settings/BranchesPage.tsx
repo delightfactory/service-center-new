@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/shared';
+import { IfCanCreate, IfCanUpdate, IfCanDelete } from '@/components/auth';
 
 // ============================================================
 // Branches Page - صفحة الفروع
@@ -165,10 +166,12 @@ export function BranchesPage() {
                 title="الفروع"
                 description="إدارة فروع مركز الصيانة"
                 actions={
-                    <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
-                        <Plus size={18} />
-                        فرع جديد
-                    </Button>
+                    <IfCanCreate resource="branches">
+                        <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
+                            <Plus size={18} />
+                            فرع جديد
+                        </Button>
+                    </IfCanCreate>
                 }
             />
 
@@ -184,9 +187,11 @@ export function BranchesPage() {
                     <CardContent className="py-12 text-center">
                         <Building2 size={48} className="mx-auto text-muted-foreground/50 mb-4" />
                         <p className="text-muted-foreground">لا توجد فروع</p>
-                        <Button variant="link" onClick={() => setShowAddModal(true)}>
-                            إضافة فرع جديد
-                        </Button>
+                        <IfCanCreate resource="branches">
+                            <Button variant="link" onClick={() => setShowAddModal(true)}>
+                                إضافة فرع جديد
+                            </Button>
+                        </IfCanCreate>
                     </CardContent>
                 </Card>
             ) : (
@@ -224,15 +229,15 @@ export function BranchesPage() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="start">
-                                            <DropdownMenuItem
-                                                className="gap-2"
-                                                onClick={() => openEditModal(branch)}
-                                            >
-                                                <Edit size={16} />
-                                                تعديل
-                                            </DropdownMenuItem>
-                                            {!branch.is_main && (
-                                                <>
+                                            <IfCanUpdate resource="branches">
+                                                <DropdownMenuItem
+                                                    className="gap-2"
+                                                    onClick={() => openEditModal(branch)}
+                                                >
+                                                    <Edit size={16} />
+                                                    تعديل
+                                                </DropdownMenuItem>
+                                                {!branch.is_main && (
                                                     <DropdownMenuItem
                                                         className="gap-2"
                                                         onClick={() => toggleActiveMutation.mutate({
@@ -242,13 +247,19 @@ export function BranchesPage() {
                                                     >
                                                         {branch.is_active ? 'تعطيل' : 'تفعيل'}
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem className="gap-2 text-destructive">
-                                                        <Trash2 size={16} />
-                                                        حذف
-                                                    </DropdownMenuItem>
-                                                </>
-                                            )}
+                                                )}
+                                            </IfCanUpdate>
+                                            <IfCanDelete resource="branches">
+                                                {!branch.is_main && (
+                                                    <>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem className="gap-2 text-destructive">
+                                                            <Trash2 size={16} />
+                                                            حذف
+                                                        </DropdownMenuItem>
+                                                    </>
+                                                )}
+                                            </IfCanDelete>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>

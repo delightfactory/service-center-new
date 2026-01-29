@@ -49,6 +49,7 @@ import { EditProductModal } from '@/components/inventory';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import type { ProductType } from '@/types/enums';
 import { PageHeader } from '@/components/shared';
+import { IfCanUpdate, IfCanDelete } from '@/components/auth';
 
 // ============================================================
 // Product Details Page - صفحة تفاصيل المنتج
@@ -336,10 +337,12 @@ export function ProductDetailsPage() {
                         <Printer size={16} className="ml-2" />
                         طباعة
                     </Button>
-                    <Button size="sm" onClick={() => setShowEditModal(true)}>
-                        <Edit size={16} className="ml-2" />
-                        تعديل
-                    </Button>
+                    <IfCanUpdate resource="products">
+                        <Button size="sm" onClick={() => setShowEditModal(true)}>
+                            <Edit size={16} className="ml-2" />
+                            تعديل
+                        </Button>
+                    </IfCanUpdate>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="icon">
@@ -347,18 +350,22 @@ export function ProductDetailsPage() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setShowEditModal(true)}>
-                                <Edit size={16} className="ml-2" />
-                                تعديل
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => setShowDeleteDialog(true)}
-                            >
-                                <Trash2 size={16} className="ml-2" />
-                                حذف
-                            </DropdownMenuItem>
+                            <IfCanUpdate resource="products">
+                                <DropdownMenuItem onClick={() => setShowEditModal(true)}>
+                                    <Edit size={16} className="ml-2" />
+                                    تعديل
+                                </DropdownMenuItem>
+                            </IfCanUpdate>
+                            <IfCanDelete resource="products">
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    className="text-destructive"
+                                    onClick={() => setShowDeleteDialog(true)}
+                                >
+                                    <Trash2 size={16} className="ml-2" />
+                                    حذف
+                                </DropdownMenuItem>
+                            </IfCanDelete>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>

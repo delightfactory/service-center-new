@@ -28,6 +28,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { PageHeader, EmptyState } from '@/components/shared';
+import { IfCanCreate } from '@/components/auth';
 import { cn, formatPhone, getInitials } from '@/lib/utils';
 import type { Customer } from '@/types';
 import type { CustomerType } from '@/types/enums';
@@ -74,12 +75,14 @@ export function CustomersPage() {
                 title="العملاء"
                 description="إدارة بيانات العملاء ومركباتهم"
                 actions={
-                    <Button asChild size="lg" className="gap-2">
-                        <Link to="/dashboard/customers/new">
-                            <Plus size={20} />
-                            <span>عميل جديد</span>
-                        </Link>
-                    </Button>
+                    <IfCanCreate resource="customers">
+                        <Button asChild size="lg" className="gap-2">
+                            <Link to="/dashboard/customers/new">
+                                <Plus size={20} />
+                                <span>عميل جديد</span>
+                            </Link>
+                        </Button>
+                    </IfCanCreate>
                 }
             />
 
@@ -175,12 +178,14 @@ export function CustomersPage() {
                     description={searchQuery ? 'لا توجد نتائج للبحث' : 'ابدأ بإضافة أول عميل'}
                     action={
                         !searchQuery ? (
-                            <Button asChild>
-                                <Link to="/dashboard/customers/new">
-                                    <Plus size={18} className="ml-2" />
-                                    إضافة عميل
-                                </Link>
-                            </Button>
+                            <IfCanCreate resource="customers">
+                                <Button asChild>
+                                    <Link to="/dashboard/customers/new">
+                                        <Plus size={18} className="ml-2" />
+                                        إضافة عميل
+                                    </Link>
+                                </Button>
+                            </IfCanCreate>
                         ) : undefined
                     }
                 />

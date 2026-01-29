@@ -51,6 +51,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared';
+import { IfCanCreate, IfCanUpdate, IfCanDelete } from '@/components/auth';
 
 // ============================================================
 // Expense Categories Page - صفحة بنود المصروفات
@@ -216,10 +217,12 @@ export function ExpenseCategoriesPage() {
                 title="بنود المصروفات"
                 description="إدارة تصنيفات المصروفات"
                 actions={
-                    <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
-                        <Plus size={18} />
-                        بند جديد
-                    </Button>
+                    <IfCanCreate resource="expense_categories">
+                        <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
+                            <Plus size={18} />
+                            بند جديد
+                        </Button>
+                    </IfCanCreate>
                 }
             />
 
@@ -331,21 +334,25 @@ export function ExpenseCategoriesPage() {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="start">
-                                                        <DropdownMenuItem
-                                                            className="gap-2"
-                                                            onClick={() => openEditModal(category)}
-                                                        >
-                                                            <Edit size={16} />
-                                                            تعديل
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem
-                                                            className="gap-2 text-destructive"
-                                                            onClick={() => setDeletingId(category.id)}
-                                                        >
-                                                            <Trash2 size={16} />
-                                                            حذف
-                                                        </DropdownMenuItem>
+                                                        <IfCanUpdate resource="expense_categories">
+                                                            <DropdownMenuItem
+                                                                className="gap-2"
+                                                                onClick={() => openEditModal(category)}
+                                                            >
+                                                                <Edit size={16} />
+                                                                تعديل
+                                                            </DropdownMenuItem>
+                                                        </IfCanUpdate>
+                                                        <IfCanDelete resource="expense_categories">
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                className="gap-2 text-destructive"
+                                                                onClick={() => setDeletingId(category.id)}
+                                                            >
+                                                                <Trash2 size={16} />
+                                                                حذف
+                                                            </DropdownMenuItem>
+                                                        </IfCanDelete>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>

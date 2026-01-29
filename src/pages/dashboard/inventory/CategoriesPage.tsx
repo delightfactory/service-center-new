@@ -45,6 +45,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader, EmptyState } from '@/components/shared';
+import { IfCanCreate, IfCanUpdate, IfCanDelete } from '@/components/auth';
 
 // ============================================================
 // Categories Page - صفحة التصنيفات
@@ -191,10 +192,12 @@ export function CategoriesPage() {
                 title="التصنيفات"
                 description="إدارة تصنيفات المنتجات والخدمات"
                 actions={
-                    <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
-                        <Plus size={18} />
-                        إضافة تصنيف
-                    </Button>
+                    <IfCanCreate resource="categories">
+                        <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
+                            <Plus size={18} />
+                            إضافة تصنيف
+                        </Button>
+                    </IfCanCreate>
                 }
             />
 
@@ -265,34 +268,38 @@ export function CategoriesPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="start">
-                                                    <DropdownMenuItem
-                                                        className="gap-2"
-                                                        onClick={() => openEditModal(category)}
-                                                    >
-                                                        <Edit size={16} />
-                                                        تعديل
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        className="gap-2"
-                                                        onClick={() => toggleActiveMutation.mutate({
-                                                            id: category.id,
-                                                            isActive: !category.is_active,
-                                                        })}
-                                                    >
-                                                        {category.is_active ? 'تعطيل' : 'تفعيل'}
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        className="gap-2 text-destructive"
-                                                        onClick={() => {
-                                                            if (confirm('هل أنت متأكد من حذف هذا التصنيف؟')) {
-                                                                deleteMutation.mutate(category.id);
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                        حذف
-                                                    </DropdownMenuItem>
+                                                    <IfCanUpdate resource="categories">
+                                                        <DropdownMenuItem
+                                                            className="gap-2"
+                                                            onClick={() => openEditModal(category)}
+                                                        >
+                                                            <Edit size={16} />
+                                                            تعديل
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            className="gap-2"
+                                                            onClick={() => toggleActiveMutation.mutate({
+                                                                id: category.id,
+                                                                isActive: !category.is_active,
+                                                            })}
+                                                        >
+                                                            {category.is_active ? 'تعطيل' : 'تفعيل'}
+                                                        </DropdownMenuItem>
+                                                    </IfCanUpdate>
+                                                    <IfCanDelete resource="categories">
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            className="gap-2 text-destructive"
+                                                            onClick={() => {
+                                                                if (confirm('هل أنت متأكد من حذف هذا التصنيف؟')) {
+                                                                    deleteMutation.mutate(category.id);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Trash2 size={16} />
+                                                            حذف
+                                                        </DropdownMenuItem>
+                                                    </IfCanDelete>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>

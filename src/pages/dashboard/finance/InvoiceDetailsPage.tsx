@@ -51,6 +51,7 @@ import {
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { InvoicePrintTemplate } from '@/components/print';
 import { PageHeader } from '@/components/shared';
+import { IfCanCreate } from '@/components/auth';
 
 // ============================================================
 // Invoice Details Page - صفحة تفاصيل الفاتورة
@@ -360,10 +361,12 @@ export function InvoiceDetailsPage() {
                             طباعة
                         </Button>
                         {canAddPayment && (
-                            <Button onClick={openPaymentDialog}>
-                                <Plus size={16} className="ml-2" />
-                                {paymentButtonLabel}
-                            </Button>
+                            <IfCanCreate resource="payments">
+                                <Button onClick={openPaymentDialog}>
+                                    <Plus size={16} className="ml-2" />
+                                    {paymentButtonLabel}
+                                </Button>
+                            </IfCanCreate>
                         )}
                     </div>
                 }

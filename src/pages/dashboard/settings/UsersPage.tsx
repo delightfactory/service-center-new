@@ -49,6 +49,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/shared';
+import { IfCanCreate, IfCanUpdate } from '@/components/auth';
 
 // ============================================================
 // Users Page - صفحة المستخدمين
@@ -316,10 +317,12 @@ export function UsersPage() {
                 title="المستخدمين"
                 description="إدارة المستخدمين والصلاحيات"
                 actions={
-                    <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
-                        <Plus size={18} />
-                        مستخدم جديد
-                    </Button>
+                    <IfCanCreate resource="users">
+                        <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
+                            <Plus size={18} />
+                            مستخدم جديد
+                        </Button>
+                    </IfCanCreate>
                 }
             />
 
@@ -487,32 +490,34 @@ export function UsersPage() {
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="start">
-                                                            <DropdownMenuItem
-                                                                className="gap-2"
-                                                                onClick={() => openEditModal(user)}
-                                                            >
-                                                                <Edit size={16} />
-                                                                تعديل
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="gap-2"
-                                                                onClick={() => toggleActiveMutation.mutate({
-                                                                    id: user.id,
-                                                                    isActive: !user.is_active,
-                                                                })}
-                                                            >
-                                                                {user.is_active ? (
-                                                                    <>
-                                                                        <UserX size={16} />
-                                                                        تعطيل
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <UserCheck size={16} />
-                                                                        تفعيل
-                                                                    </>
-                                                                )}
-                                                            </DropdownMenuItem>
+                                                            <IfCanUpdate resource="users">
+                                                                <DropdownMenuItem
+                                                                    className="gap-2"
+                                                                    onClick={() => openEditModal(user)}
+                                                                >
+                                                                    <Edit size={16} />
+                                                                    تعديل
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    className="gap-2"
+                                                                    onClick={() => toggleActiveMutation.mutate({
+                                                                        id: user.id,
+                                                                        isActive: !user.is_active,
+                                                                    })}
+                                                                >
+                                                                    {user.is_active ? (
+                                                                        <>
+                                                                            <UserX size={16} />
+                                                                            تعطيل
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <UserCheck size={16} />
+                                                                            تفعيل
+                                                                        </>
+                                                                    )}
+                                                                </DropdownMenuItem>
+                                                            </IfCanUpdate>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>

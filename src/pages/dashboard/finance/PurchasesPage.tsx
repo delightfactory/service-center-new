@@ -53,6 +53,7 @@ import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { PageHeader, EmptyState } from '@/components/shared';
 import { useRealtime } from '@/hooks';
 import { useAuth } from '@/contexts/AuthContext';
+import { IfCanCreate, IfCanApprove, IfCanDelete } from '@/components/auth';
 
 // ============================================================
 // Purchases Page - فواتير المشتريات
@@ -519,29 +520,33 @@ export function PurchasesPage() {
 
                                                         {/* Approve button - only for draft */}
                                                         {invoice.status === 'draft' && (
-                                                            <button
-                                                                onClick={() => approveMutation.mutate(invoice.id)}
-                                                                disabled={approveMutation.isPending}
-                                                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 transition-colors disabled:opacity-50"
-                                                                title="اعتماد وإضافة للمخزون"
-                                                            >
-                                                                <Check size={15} />
-                                                            </button>
+                                                            <IfCanApprove resource="purchases">
+                                                                <button
+                                                                    onClick={() => approveMutation.mutate(invoice.id)}
+                                                                    disabled={approveMutation.isPending}
+                                                                    className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 transition-colors disabled:opacity-50"
+                                                                    title="اعتماد وإضافة للمخزون"
+                                                                >
+                                                                    <Check size={15} />
+                                                                </button>
+                                                            </IfCanApprove>
                                                         )}
 
                                                         {/* Cancel button - only for draft */}
                                                         {invoice.status === 'draft' && (
-                                                            <button
-                                                                onClick={() => {
-                                                                    if (confirm('هل أنت متأكد من إلغاء هذه الفاتورة؟')) {
-                                                                        // TODO: add cancel mutation
-                                                                    }
-                                                                }}
-                                                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
-                                                                title="إلغاء"
-                                                            >
-                                                                <X size={15} />
-                                                            </button>
+                                                            <IfCanDelete resource="purchases">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (confirm('هل أنت متأكد من إلغاء هذه الفاتورة؟')) {
+                                                                            // TODO: add cancel mutation
+                                                                        }
+                                                                    }}
+                                                                    className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+                                                                    title="إلغاء"
+                                                                >
+                                                                    <X size={15} />
+                                                                </button>
+                                                            </IfCanDelete>
                                                         )}
                                                     </div>
                                                 </TableCell>
@@ -556,10 +561,12 @@ export function PurchasesPage() {
                                 title="لا توجد فواتير مشتريات"
                                 description="ابدأ بإنشاء أول فاتورة شراء"
                                 action={
-                                    <Button onClick={() => setShowDialog(true)}>
-                                        <Plus size={18} className="ml-2" />
-                                        فاتورة شراء جديدة
-                                    </Button>
+                                    <IfCanCreate resource="purchases">
+                                        <Button onClick={() => setShowDialog(true)}>
+                                            <Plus size={18} className="ml-2" />
+                                            فاتورة شراء جديدة
+                                        </Button>
+                                    </IfCanCreate>
                                 }
                             />
                         )}

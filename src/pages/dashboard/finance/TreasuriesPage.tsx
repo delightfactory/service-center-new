@@ -42,6 +42,7 @@ import {
 import { cn, formatCurrency } from '@/lib/utils';
 import { PageHeader, EmptyState } from '@/components/shared';
 import { useRealtime } from '@/hooks';
+import { IfCanCreate, IfCanUpdate } from '@/components/auth';
 
 // ============================================================
 // Treasuries Page - صفحة الخزن
@@ -287,14 +288,16 @@ export function TreasuriesPage() {
                 description="إدارة الخزن والأرصدة"
                 actions={
                     <div className="flex gap-2">
-                        <Button variant="outline" className="gap-2" onClick={() => setShowTransferModal(true)}>
-                            <ArrowRightLeft size={18} />
-                            تحويل
-                        </Button>
-                        <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
-                            <Plus size={18} />
-                            خزنة جديدة
-                        </Button>
+                        <IfCanCreate resource="treasuries">
+                            <Button variant="outline" className="gap-2" onClick={() => setShowTransferModal(true)}>
+                                <ArrowRightLeft size={18} />
+                                تحويل
+                            </Button>
+                            <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
+                                <Plus size={18} />
+                                خزنة جديدة
+                            </Button>
+                        </IfCanCreate>
                     </div>
                 }
             />
@@ -368,10 +371,12 @@ export function TreasuriesPage() {
                     title="لا توجد خزن"
                     description="ابدأ بإنشاء خزنة جديدة"
                     action={
-                        <Button onClick={() => setShowAddModal(true)}>
-                            <Plus size={18} className="ml-2" />
-                            إضافة خزنة جديدة
-                        </Button>
+                        <IfCanCreate resource="treasuries">
+                            <Button onClick={() => setShowAddModal(true)}>
+                                <Plus size={18} className="ml-2" />
+                                إضافة خزنة جديدة
+                            </Button>
+                        </IfCanCreate>
                     }
                 />
             ) : (
@@ -419,10 +424,12 @@ export function TreasuriesPage() {
                                                     <Eye size={16} />
                                                     عرض الحركات
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="gap-2">
-                                                    <Edit size={16} />
-                                                    تعديل
-                                                </DropdownMenuItem>
+                                                <IfCanUpdate resource="treasuries">
+                                                    <DropdownMenuItem className="gap-2">
+                                                        <Edit size={16} />
+                                                        تعديل
+                                                    </DropdownMenuItem>
+                                                </IfCanUpdate>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>

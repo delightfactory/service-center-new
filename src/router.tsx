@@ -13,6 +13,7 @@ import { InvoicesPage, TreasuriesPage, ExpensesPage, ExpenseCategoriesPage, Crea
 import { UsersPage, BranchesPage, ProfilePage } from '@/pages/dashboard/settings';
 import { SuppliersPage, SupplierDetailsPage } from '@/pages/dashboard/suppliers';
 import { TechLayout, TechJobsPage, TechJobDetailsPage, TechProfilePage } from '@/pages/technician';
+import { RoleGuard, TechnicianGuard } from '@/components/auth';
 
 const router = createBrowserRouter([
     // Root redirect
@@ -45,213 +46,370 @@ const router = createBrowserRouter([
                 index: true,
                 element: <DashboardPage />,
             },
-            // Reports
+            // Reports - للإدارة والمشرفين والمحاسب
             {
                 path: 'reports',
-                element: <ReportsPage />,
+                element: (
+                    <RoleGuard allowedRoles={['admin', 'manager', 'supervisor', 'accountant']}>
+                        <ReportsPage />
+                    </RoleGuard>
+                ),
             },
-            // Reception
+            // Reception - للإدارة والمشرفين والمهندسين
             {
                 path: 'reception',
                 children: [
                     {
                         index: true,
-                        element: <ReceptionListPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'supervisor', 'engineer']}>
+                                <ReceptionListPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'new',
-                        element: <ReceptionWizardPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'engineer']}>
+                                <ReceptionWizardPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: ':id',
-                        element: <AssessmentDetailsPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'supervisor', 'engineer']}>
+                                <AssessmentDetailsPage />
+                            </RoleGuard>
+                        ),
                     },
                 ],
             },
             // Quick Check - كشف سريع
             {
                 path: 'quick-check',
-                element: <QuickCheckPage />,
+                element: (
+                    <RoleGuard allowedRoles={['admin', 'manager', 'engineer']}>
+                        <QuickCheckPage />
+                    </RoleGuard>
+                ),
             },
             // Bench Work - صيانة كنترول
             {
                 path: 'bench-work',
-                element: <BenchWorkPage />,
+                element: (
+                    <RoleGuard allowedRoles={['admin', 'manager', 'engineer']}>
+                        <BenchWorkPage />
+                    </RoleGuard>
+                ),
             },
-            // Workshop
+            // Workshop - للإدارة والمشرفين والمهندسين
             {
                 path: 'workshop',
                 children: [
                     {
                         index: true,
-                        element: <WorkshopPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'supervisor', 'engineer']}>
+                                <WorkshopPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'kanban',
-                        element: <KanbanPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'supervisor', 'engineer']}>
+                                <KanbanPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'review',
-                        element: <SupervisorReviewPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'supervisor']}>
+                                <SupervisorReviewPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: ':id',
-                        element: <JobOrderDetailsPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'supervisor', 'engineer']}>
+                                <JobOrderDetailsPage />
+                            </RoleGuard>
+                        ),
                     },
                 ],
             },
-            // Customers
+            // Customers - للإدارة والمشرفين والمهندسين والمحاسب
             {
                 path: 'customers',
                 children: [
                     {
                         index: true,
-                        element: <CustomersPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'supervisor', 'engineer', 'accountant']}>
+                                <CustomersPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'new',
-                        element: <NewCustomerPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'engineer']}>
+                                <NewCustomerPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: ':id',
-                        element: <CustomerDetailsPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'supervisor', 'engineer', 'accountant']}>
+                                <CustomerDetailsPage />
+                            </RoleGuard>
+                        ),
                     },
                 ],
             },
-            // Vehicles
+            // Vehicles - للإدارة والمشرفين والمهندسين
             {
                 path: 'vehicles',
                 children: [
                     {
                         index: true,
-                        element: <VehiclesPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'supervisor', 'engineer']}>
+                                <VehiclesPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'new',
-                        element: <NewVehiclePage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'engineer']}>
+                                <NewVehiclePage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: ':id',
-                        element: <VehicleDetailsPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'supervisor', 'engineer']}>
+                                <VehicleDetailsPage />
+                            </RoleGuard>
+                        ),
                     },
                 ],
             },
-            // Suppliers
+            // Suppliers - للإدارة وأمين المخزن
             {
                 path: 'suppliers',
                 children: [
                     {
                         index: true,
-                        element: <SuppliersPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'warehouse', 'accountant']}>
+                                <SuppliersPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: ':id',
-                        element: <SupplierDetailsPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'warehouse', 'accountant']}>
+                                <SupplierDetailsPage />
+                            </RoleGuard>
+                        ),
                     },
                 ],
             },
-            // Inventory
+            // Inventory - للإدارة وأمين المخزن
             {
                 path: 'inventory',
                 children: [
                     {
                         index: true,
-                        element: <ProductsPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'warehouse']}>
+                                <ProductsPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'products',
-                        element: <ProductsPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'warehouse']}>
+                                <ProductsPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'products/:id',
-                        element: <ProductDetailsPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'warehouse']}>
+                                <ProductDetailsPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'categories',
-                        element: <CategoriesPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'warehouse']}>
+                                <CategoriesPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'warehouses',
-                        element: <WarehousesPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'warehouse']}>
+                                <WarehousesPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'stock',
-                        element: <InventoryPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'warehouse']}>
+                                <InventoryPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'transfers',
-                        element: <WarehouseTransfersPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'warehouse']}>
+                                <WarehouseTransfersPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'movements',
-                        element: <StockMovementsPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'warehouse']}>
+                                <StockMovementsPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'audit',
-                        element: <StockAuditPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'warehouse']}>
+                                <StockAuditPage />
+                            </RoleGuard>
+                        ),
                     },
                 ],
             },
-            // Finance
+            // Finance - للإدارة والمحاسب
             {
                 path: 'finance',
                 children: [
                     {
                         index: true,
-                        element: <InvoicesPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'accountant']}>
+                                <InvoicesPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'invoices',
-                        element: <InvoicesPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'accountant']}>
+                                <InvoicesPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'invoices/new',
-                        element: <CreateInvoicePage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'accountant']}>
+                                <CreateInvoicePage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'invoices/:id',
-                        element: <InvoiceDetailsPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'accountant', 'supervisor', 'engineer']}>
+                                <InvoiceDetailsPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'purchases',
-                        element: <PurchasesPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'accountant', 'warehouse']}>
+                                <PurchasesPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'payments',
-                        element: <PaymentsPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'accountant']}>
+                                <PaymentsPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'treasuries',
-                        element: <TreasuriesPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'accountant']}>
+                                <TreasuriesPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'expenses',
-                        element: <ExpensesPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'accountant']}>
+                                <ExpensesPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'expense-categories',
-                        element: <ExpenseCategoriesPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager', 'accountant']}>
+                                <ExpenseCategoriesPage />
+                            </RoleGuard>
+                        ),
                     },
                 ],
             },
-            // Settings
+            // Settings - للإدارة فقط
             {
                 path: 'settings',
                 children: [
                     {
                         index: true,
-                        element: <UsersPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager']}>
+                                <UsersPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'branches',
-                        element: <BranchesPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin']}>
+                                <BranchesPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'users',
-                        element: <UsersPage />,
+                        element: (
+                            <RoleGuard allowedRoles={['admin', 'manager']}>
+                                <UsersPage />
+                            </RoleGuard>
+                        ),
                     },
                     {
                         path: 'profile',
+                        // Profile متاح للجميع
                         element: <ProfilePage />,
                     },
                 ],
@@ -259,10 +417,14 @@ const router = createBrowserRouter([
         ],
     },
 
-    // Technician routes
+    // Technician routes - للفنيين فقط
     {
         path: '/tech',
-        element: <TechLayout />,
+        element: (
+            <TechnicianGuard>
+                <TechLayout />
+            </TechnicianGuard>
+        ),
         children: [
             {
                 index: true,

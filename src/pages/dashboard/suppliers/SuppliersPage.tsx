@@ -51,6 +51,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { PageHeader, EmptyState } from '@/components/shared';
+import { IfCanCreate, IfCanUpdate, IfCanDelete } from '@/components/auth';
 import { cn, formatCurrency, formatPhone } from '@/lib/utils';
 
 // ============================================================
@@ -243,10 +244,12 @@ export function SuppliersPage() {
                     title="الموردين"
                     description="إدارة بيانات الموردين ومستحقاتهم"
                     actions={
-                        <Button className="gap-2" onClick={() => handleOpenDialog()}>
-                            <Plus size={18} />
-                            مورد جديد
-                        </Button>
+                        <IfCanCreate resource="suppliers">
+                            <Button className="gap-2" onClick={() => handleOpenDialog()}>
+                                <Plus size={18} />
+                                مورد جديد
+                            </Button>
+                        </IfCanCreate>
                     }
                 />
 
@@ -404,21 +407,25 @@ export function SuppliersPage() {
                                                                     عرض التفاصيل
                                                                 </Link>
                                                             </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="gap-2"
-                                                                onClick={() => handleOpenDialog(supplier)}
-                                                            >
-                                                                <Edit size={16} />
-                                                                تعديل
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem
-                                                                className="gap-2 text-destructive"
-                                                                onClick={() => handleDelete(supplier)}
-                                                            >
-                                                                <Trash2 size={16} />
-                                                                حذف
-                                                            </DropdownMenuItem>
+                                                            <IfCanUpdate resource="suppliers">
+                                                                <DropdownMenuItem
+                                                                    className="gap-2"
+                                                                    onClick={() => handleOpenDialog(supplier)}
+                                                                >
+                                                                    <Edit size={16} />
+                                                                    تعديل
+                                                                </DropdownMenuItem>
+                                                            </IfCanUpdate>
+                                                            <IfCanDelete resource="suppliers">
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem
+                                                                    className="gap-2 text-destructive"
+                                                                    onClick={() => handleDelete(supplier)}
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                    حذف
+                                                                </DropdownMenuItem>
+                                                            </IfCanDelete>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>
@@ -434,20 +441,22 @@ export function SuppliersPage() {
                                 description={searchQuery ? 'لا توجد نتائج للبحث' : 'ابدأ بإضافة أول مورد'}
                                 action={
                                     !searchQuery ? (
-                                        <Button onClick={() => handleOpenDialog()}>
-                                            <Plus size={18} className="ml-2" />
-                                            إضافة مورد
-                                        </Button>
+                                        <IfCanCreate resource="suppliers">
+                                            <Button onClick={() => handleOpenDialog()}>
+                                                <Plus size={18} className="ml-2" />
+                                                إضافة مورد
+                                            </Button>
+                                        </IfCanCreate>
                                     ) : undefined
                                 }
                             />
                         )}
                     </CardContent>
                 </Card>
-            </div>
+            </div >
 
             {/* Add/Edit Dialog */}
-            <Dialog open={showDialog} onOpenChange={setShowDialog}>
+            < Dialog open={showDialog} onOpenChange={setShowDialog} >
                 <DialogContent className="sm:max-w-lg" dir="rtl">
                     <DialogHeader>
                         <DialogTitle>
@@ -549,7 +558,7 @@ export function SuppliersPage() {
                         </DialogFooter>
                     </form>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
         </>
     );
 }

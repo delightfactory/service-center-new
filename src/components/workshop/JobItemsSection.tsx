@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
+import { usePermissions } from '@/hooks/usePermissions';
 import { JOB_ITEM_TYPES } from '@/types/enums';
 import type { JobItem } from './types';
 
@@ -47,6 +48,11 @@ export function JobItemsSection({
         !i.is_dispensed
     );
 
+    // Permission checks
+    const permissions = usePermissions();
+    const canUpdateJobOrder = permissions.canUpdate('job_orders');
+    const canManageInventory = permissions.canManage('inventory');
+
     return (
         <Card>
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
@@ -55,7 +61,7 @@ export function JobItemsSection({
                     البنود
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                    {onDispense && hasUndispensedItems && (
+                    {onDispense && hasUndispensedItems && canManageInventory && (
                         <Button
                             variant="secondary"
                             size="sm"
@@ -66,10 +72,12 @@ export function JobItemsSection({
                             {isDispensing ? 'جاري الصرف...' : 'صرف القطع'}
                         </Button>
                     )}
-                    <Button size="sm" onClick={onAddItem}>
-                        <Plus size={14} className="ml-1" />
-                        إضافة بند
-                    </Button>
+                    {canUpdateJobOrder && (
+                        <Button size="sm" onClick={onAddItem}>
+                            <Plus size={14} className="ml-1" />
+                            إضافة بند
+                        </Button>
+                    )}
                 </div>
             </CardHeader>
             <CardContent>
@@ -94,7 +102,7 @@ export function JobItemsSection({
                                 <div className="flex items-center gap-2">
                                     <span className="text-sm font-semibold">{formatCurrency(item.total_price)}</span>
                                     <span className="text-xs text-muted-foreground">({item.quantity}×{formatCurrency(item.unit_price)})</span>
-                                    {!item.is_completed && (
+                                    {!item.is_completed && canUpdateJobOrder && (
                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
                                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditItem(item)}>
                                                 <Edit size={14} />

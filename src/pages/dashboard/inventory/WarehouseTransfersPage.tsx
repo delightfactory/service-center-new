@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/table';
 import { cn, formatDate } from '@/lib/utils';
 import { PageHeader } from '@/components/shared';
+import { IfCanCreate } from '@/components/auth';
 
 // ============================================================
 // Warehouse Transfers Page - التحويلات بين المخازن (متعدد الأصناف)

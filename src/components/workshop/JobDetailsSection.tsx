@@ -2,6 +2,7 @@ import React from 'react';
 import { FileText, Wrench, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/hooks/usePermissions';
 
 // ============================================================
 // Job Details Section Component
@@ -18,6 +19,10 @@ export function JobDetailsSection({
     instructions,
     onEditInstructions,
 }: JobDetailsSectionProps) {
+    // Permission check - only those who can update job_orders can edit instructions
+    const permissions = usePermissions();
+    const canEditInstructions = permissions.canUpdate('job_orders');
+
     return (
         <div className="space-y-4">
             {/* شكوى العميل */}
@@ -42,10 +47,12 @@ export function JobDetailsSection({
                         <Wrench size={18} />
                         توجيهات المدير
                     </CardTitle>
-                    <Button size="sm" variant="ghost" onClick={onEditInstructions}>
-                        <Edit size={14} className="ml-1" />
-                        {instructions ? 'تعديل' : 'إضافة'}
-                    </Button>
+                    {canEditInstructions && (
+                        <Button size="sm" variant="ghost" onClick={onEditInstructions}>
+                            <Edit size={14} className="ml-1" />
+                            {instructions ? 'تعديل' : 'إضافة'}
+                        </Button>
+                    )}
                 </CardHeader>
                 <CardContent>
                     {instructions ? (
@@ -62,3 +69,4 @@ export function JobDetailsSection({
         </div>
     );
 }
+

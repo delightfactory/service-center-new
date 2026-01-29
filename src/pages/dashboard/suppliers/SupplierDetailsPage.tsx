@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/table';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { PageHeader } from '@/components/shared';
+import { IfCanUpdate } from '@/components/auth';
 
 // ============================================================
 // Supplier Details Page - صفحة تفاصيل المورد
@@ -254,10 +255,12 @@ export function SupplierDetailsPage() {
                         <p className="text-muted-foreground font-mono">{supplier.code}</p>
                     </div>
                 </div>
-                <Button variant="outline" onClick={openEditDialog}>
-                    <Edit size={16} className="ml-2" />
-                    تعديل
-                </Button>
+                <IfCanUpdate resource="suppliers">
+                    <Button variant="outline" onClick={openEditDialog}>
+                        <Edit size={16} className="ml-2" />
+                        تعديل
+                    </Button>
+                </IfCanUpdate>
             </div>
 
             {/* Stats Cards */}

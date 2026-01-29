@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/table';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { PageHeader } from '@/components/shared';
+import { IfCanUpdate } from '@/components/auth';
 
 // ============================================================
 // Customer Details Page - صفحة تفاصيل العميل
@@ -311,10 +312,12 @@ export function CustomerDetailsPage() {
                 backLink="/dashboard/customers"
                 actions={
                     <div className="flex gap-2">
-                        <Button variant="outline" onClick={openEditDialog}>
-                            <Edit size={16} className="ml-2" />
-                            تعديل
-                        </Button>
+                        <IfCanUpdate resource="customers">
+                            <Button variant="outline" onClick={openEditDialog}>
+                                <Edit size={16} className="ml-2" />
+                                تعديل
+                            </Button>
+                        </IfCanUpdate>
                         <Button onClick={() => navigate(`/dashboard/reception/new?customer=${id}`)}>
                             <Plus size={16} className="ml-2" />
                             استقبال جديد

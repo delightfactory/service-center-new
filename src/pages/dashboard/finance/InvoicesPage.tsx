@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/select';
 import { PaymentModal } from '@/components/finance';
 import { PageHeader, EmptyState } from '@/components/shared';
+import { IfCanCreate } from '@/components/auth';
 import { useRealtime } from '@/hooks';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 
@@ -229,10 +230,12 @@ export function InvoicesPage() {
                 title="الفواتير"
                 description="إدارة فواتير المبيعات والمشتريات"
                 actions={
-                    <Button className="gap-2" onClick={() => navigate('/dashboard/finance/invoices/new')}>
-                        <Plus size={18} />
-                        فاتورة جديدة
-                    </Button>
+                    <IfCanCreate resource="invoices">
+                        <Button className="gap-2" onClick={() => navigate('/dashboard/finance/invoices/new')}>
+                            <Plus size={18} />
+                            فاتورة جديدة
+                        </Button>
+                    </IfCanCreate>
                 }
             />
 

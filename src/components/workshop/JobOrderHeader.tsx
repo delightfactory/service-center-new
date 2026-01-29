@@ -15,6 +15,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn, formatDate } from '@/lib/utils';
+import { usePermissions } from '@/hooks/usePermissions';
 import { JOB_STATUSES, JOB_CATEGORIES, PRIORITY_LEVELS, type JobStatus, type PriorityLevel } from '@/types/enums';
 import type { AssignedTech, LinkedInvoice } from './types';
 
@@ -74,6 +75,12 @@ export function JobOrderHeader({
     const currentStatusStyle = statusStyles[status];
     const StatusIcon = currentStatusStyle.icon;
 
+    // Permission checks
+    const permissions = usePermissions();
+    const canManageJobOrders = permissions.canManage('job_orders') || permissions.canUpdate('job_orders');
+    const canCreateInvoice = permissions.canCreate('invoices');
+    const canDeleteJobOrder = permissions.canDelete('job_orders');
+
     return (
         <div className="bg-card border rounded-xl p-4 sticky top-0 z-10">
             {/* الصف العلوي */}
@@ -127,13 +134,15 @@ export function JobOrderHeader({
                     <Button variant="outline" size="sm" onClick={onRefresh}>
                         <RefreshCw size={16} />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={onAssignTech} className="gap-1">
-                        <Users size={16} />
-                        <span className="hidden sm:inline">الفنيين</span>
-                        {assignedTechs && assignedTechs.length > 0 && (
-                            <Badge variant="secondary" className="mr-1">{assignedTechs.length}</Badge>
-                        )}
-                    </Button>
+                    {canManageJobOrders && (
+                        <Button variant="outline" size="sm" onClick={onAssignTech} className="gap-1">
+                            <Users size={16} />
+                            <span className="hidden sm:inline">الفنيين</span>
+                            {assignedTechs && assignedTechs.length > 0 && (
+                                <Badge variant="secondary" className="mr-1">{assignedTechs.length}</Badge>
+                            )}
+                        </Button>
+                    )}
                     {linkedInvoice ? (
                         <Button variant="outline" size="sm" asChild className="gap-1">
                             <Link to={`/dashboard/finance/invoices/${linkedInvoice.id}`}>
@@ -141,7 +150,7 @@ export function JobOrderHeader({
                                 <span className="hidden sm:inline">{linkedInvoice.code}</span>
                             </Link>
                         </Button>
-                    ) : (
+                    ) : canCreateInvoice && (
                         <Button
                             variant="outline"
                             size="sm"
@@ -164,15 +173,19 @@ export function JobOrderHeader({
                                 <Printer size={16} />
                                 طباعة
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                className="gap-2 text-destructive"
-                                onClick={() => onStatusChange('cancelled')}
-                                disabled={status === 'cancelled' || status === 'delivered'}
-                            >
-                                <XCircle size={16} />
-                                إلغاء الأمر
-                            </DropdownMenuItem>
+                            {canDeleteJobOrder && (
+                                <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        className="gap-2 text-destructive"
+                                        onClick={() => onStatusChange('cancelled')}
+                                        disabled={status === 'cancelled' || status === 'delivered'}
+                                    >
+                                        <XCircle size={16} />
+                                        إلغاء الأمر
+                                    </DropdownMenuItem>
+                                </>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>

@@ -49,6 +49,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { PageHeader, EmptyState } from '@/components/shared';
+import { IfCanCreate, IfCanUpdate, IfCanDelete, IfCanApprove } from '@/components/auth';
 import { useRealtime } from '@/hooks';
 
 // ============================================================
@@ -303,10 +304,12 @@ export function ExpensesPage() {
                 title="المصروفات"
                 description="إدارة ومتابعة المصروفات"
                 actions={
-                    <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
-                        <Plus size={18} />
-                        مصروف جديد
-                    </Button>
+                    <IfCanCreate resource="expenses">
+                        <Button className="gap-2" onClick={() => { resetForm(); setShowAddModal(true); }}>
+                            <Plus size={18} />
+                            مصروف جديد
+                        </Button>
+                    </IfCanCreate>
                 }
             />
 
@@ -402,10 +405,12 @@ export function ExpensesPage() {
                             title="لا توجد مصروفات"
                             description="لم يتم العثور على مصروفات"
                             action={
-                                <Button onClick={() => setShowAddModal(true)}>
-                                    <Plus size={18} className="ml-2" />
-                                    إضافة مصروف جديد
-                                </Button>
+                                <IfCanCreate resource="expenses">
+                                    <Button onClick={() => setShowAddModal(true)}>
+                                        <Plus size={18} className="ml-2" />
+                                        إضافة مصروف جديد
+                                    </Button>
+                                </IfCanCreate>
                             }
                         />
                     ) : (
@@ -455,44 +460,52 @@ export function ExpensesPage() {
                                                 <TableCell>
                                                     <div className="flex items-center gap-1">
                                                         {/* Edit button */}
-                                                        <button
-                                                            className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
-                                                            title="تعديل"
-                                                        >
-                                                            <Edit size={15} />
-                                                        </button>
+                                                        <IfCanUpdate resource="expenses">
+                                                            <button
+                                                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+                                                                title="تعديل"
+                                                            >
+                                                                <Edit size={15} />
+                                                            </button>
+                                                        </IfCanUpdate>
 
                                                         {/* Approve button - only for pending */}
-                                                        {expense.status === 'pending' && (
-                                                            <button
-                                                                onClick={() => approveMutation.mutate(expense.id)}
-                                                                disabled={approveMutation.isPending}
-                                                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 transition-colors disabled:opacity-50"
-                                                                title="اعتماد"
-                                                            >
-                                                                <CheckCircle2 size={15} />
-                                                            </button>
-                                                        )}
+                                                        <IfCanApprove resource="expenses">
+                                                            {expense.status === 'pending' && (
+                                                                <button
+                                                                    onClick={() => approveMutation.mutate(expense.id)}
+                                                                    disabled={approveMutation.isPending}
+                                                                    className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 transition-colors disabled:opacity-50"
+                                                                    title="اعتماد"
+                                                                >
+                                                                    <CheckCircle2 size={15} />
+                                                                </button>
+                                                            )}
+                                                        </IfCanApprove>
 
                                                         {/* Reject button - only for pending */}
-                                                        {expense.status === 'pending' && (
-                                                            <button
-                                                                onClick={() => rejectMutation.mutate(expense.id)}
-                                                                disabled={rejectMutation.isPending}
-                                                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors disabled:opacity-50"
-                                                                title="رفض"
-                                                            >
-                                                                <XCircle size={15} />
-                                                            </button>
-                                                        )}
+                                                        <IfCanApprove resource="expenses">
+                                                            {expense.status === 'pending' && (
+                                                                <button
+                                                                    onClick={() => rejectMutation.mutate(expense.id)}
+                                                                    disabled={rejectMutation.isPending}
+                                                                    className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors disabled:opacity-50"
+                                                                    title="رفض"
+                                                                >
+                                                                    <XCircle size={15} />
+                                                                </button>
+                                                            )}
+                                                        </IfCanApprove>
 
                                                         {/* Delete button */}
-                                                        <button
-                                                            className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                                                            title="حذف"
-                                                        >
-                                                            <Trash2 size={15} />
-                                                        </button>
+                                                        <IfCanDelete resource="expenses">
+                                                            <button
+                                                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                                                                title="حذف"
+                                                            >
+                                                                <Trash2 size={15} />
+                                                            </button>
+                                                        </IfCanDelete>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>

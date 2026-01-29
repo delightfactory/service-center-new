@@ -42,6 +42,7 @@ import {
 import { cn, formatCurrency } from '@/lib/utils';
 import { PageHeader, EmptyState } from '@/components/shared';
 import { AddProductModal, ProductImportModal, ExportProductsButton } from '@/components/inventory';
+import { IfCanCreate } from '@/components/auth';
 
 // ============================================================
 // Products Page - صفحة المنتجات والخدمات
@@ -196,13 +197,15 @@ export function ProductsPage() {
                 actions={
                     <div className="flex items-center gap-2">
                         <ExportProductsButton />
-                        <Button variant="outline" size="sm" onClick={() => setShowImportModal(true)}>
-                            استيراد
-                        </Button>
-                        <Button className="gap-2" onClick={() => setShowAddModal(true)}>
-                            <Plus size={18} />
-                            إضافة منتج
-                        </Button>
+                        <IfCanCreate resource="products">
+                            <Button variant="outline" size="sm" onClick={() => setShowImportModal(true)}>
+                                استيراد
+                            </Button>
+                            <Button className="gap-2" onClick={() => setShowAddModal(true)}>
+                                <Plus size={18} />
+                                إضافة منتج
+                            </Button>
+                        </IfCanCreate>
                     </div>
                 }
             />

@@ -30,6 +30,7 @@ import {
 import { cn, formatDate } from '@/lib/utils';
 import type { PriorityLevel } from '@/types/enums';
 import { PageHeader } from '@/components/shared';
+import { IfCanApprove } from '@/components/auth';
 
 // ============================================================
 // Supervisor Review Page - صفحة مراجعة المشرف
@@ -548,23 +549,25 @@ export function SupervisorReviewPage() {
                                                 <Eye size={14} />
                                                 عرض التفاصيل
                                             </Button>
-                                            <Button
-                                                size="sm"
-                                                className="flex-1 gap-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg shadow-green-500/20"
-                                                onClick={() => handleApprove(job)}
-                                            >
-                                                <CheckCircle2 size={14} />
-                                                اعتماد
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="flex-1 gap-1 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950"
-                                                onClick={() => handleReject(job)}
-                                            >
-                                                <XCircle size={14} />
-                                                إرجاع
-                                            </Button>
+                                            <IfCanApprove resource="job_orders">
+                                                <Button
+                                                    size="sm"
+                                                    className="flex-1 gap-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg shadow-green-500/20"
+                                                    onClick={() => handleApprove(job)}
+                                                >
+                                                    <CheckCircle2 size={14} />
+                                                    اعتماد
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex-1 gap-1 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950"
+                                                    onClick={() => handleReject(job)}
+                                                >
+                                                    <XCircle size={14} />
+                                                    إرجاع
+                                                </Button>
+                                            </IfCanApprove>
                                         </div>
                                     </div>
                                 </CardContent>

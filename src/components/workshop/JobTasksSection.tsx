@@ -3,6 +3,7 @@ import { CheckCircle2, Plus, Edit, Trash2, Check } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { JobTask } from './types';
 
 // ============================================================
@@ -27,6 +28,12 @@ export function JobTasksSection({
     isToggling,
 }: JobTasksSectionProps) {
     const completedCount = tasks.filter(t => t.is_completed).length;
+    const permissions = usePermissions();
+
+    // Permission checks for job_tasks resource
+    const canCreateTask = permissions.canCreate('job_tasks');
+    const canUpdateTask = permissions.canUpdate('job_tasks');
+    const canDeleteTask = permissions.canDelete('job_tasks');
 
     return (
         <Card>
@@ -35,10 +42,12 @@ export function JobTasksSection({
                     <CheckCircle2 size={18} />
                     المهام ({completedCount}/{tasks.length})
                 </CardTitle>
-                <Button size="sm" variant="outline" onClick={onAddTask}>
-                    <Plus size={14} className="ml-1" />
-                    إضافة
-                </Button>
+                {canCreateTask && (
+                    <Button size="sm" variant="outline" onClick={onAddTask}>
+                        <Plus size={14} className="ml-1" />
+                        إضافة
+                    </Button>
+                )}
             </CardHeader>
             <CardContent>
                 {tasks.length === 0 ? (
@@ -76,19 +85,23 @@ export function JobTasksSection({
                                         <p className="text-xs text-red-600 mt-0.5">⚠️ {task.blocked_reason}</p>
                                     )}
                                 </div>
-                                {!task.is_completed && (
+                                {!task.is_completed && (canUpdateTask || canDeleteTask) && (
                                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditTask(task)}>
-                                            <Edit size={14} />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7 text-destructive"
-                                            onClick={() => { if (confirm('هل تريد حذف هذه المهمة؟')) onDeleteTask(task.id); }}
-                                        >
-                                            <Trash2 size={14} />
-                                        </Button>
+                                        {canUpdateTask && (
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditTask(task)}>
+                                                <Edit size={14} />
+                                            </Button>
+                                        )}
+                                        {canDeleteTask && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-7 w-7 text-destructive"
+                                                onClick={() => { if (confirm('هل تريد حذف هذه المهمة؟')) onDeleteTask(task.id); }}
+                                            >
+                                                <Trash2 size={14} />
+                                            </Button>
+                                        )}
                                     </div>
                                 )}
                             </div>

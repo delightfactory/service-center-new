@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/table';
 import { cn, formatDate } from '@/lib/utils';
 import { PageHeader } from '@/components/shared';
+import { IfCanUpdate } from '@/components/auth';
 
 // ============================================================
 // Vehicle Details Page - صفحة تفاصيل المركبة
@@ -242,10 +243,12 @@ export function VehicleDetailsPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={openEditDialog}>
-                        <Edit size={16} className="ml-2" />
-                        تعديل
-                    </Button>
+                    <IfCanUpdate resource="vehicles">
+                        <Button variant="outline" onClick={openEditDialog}>
+                            <Edit size={16} className="ml-2" />
+                            تعديل
+                        </Button>
+                    </IfCanUpdate>
                     <Button onClick={() => navigate(`/dashboard/reception/new?vehicle=${id}`)}>
                         <Plus size={16} className="ml-2" />
                         استقبال جديد

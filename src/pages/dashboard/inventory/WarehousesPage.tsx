@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/shared';
+import { IfCanCreate, IfCanUpdate, IfCanDelete } from '@/components/auth';
 
 
 // ============================================================
@@ -234,10 +235,12 @@ export function WarehousesPage() {
                     title="إدارة المخازن"
                     description="إنشاء وتعديل وحذف المخازن"
                     actions={
-                        <Button className="gap-2" onClick={() => { resetForm(); setShowDialog(true); }}>
-                            <Plus size={18} />
-                            مخزن جديد
-                        </Button>
+                        <IfCanCreate resource="warehouses">
+                            <Button className="gap-2" onClick={() => { resetForm(); setShowDialog(true); }}>
+                                <Plus size={18} />
+                                مخزن جديد
+                            </Button>
+                        </IfCanCreate>
                     }
                 />
 
@@ -340,25 +343,29 @@ export function WarehousesPage() {
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="start">
-                                                            <DropdownMenuItem
-                                                                className="gap-2"
-                                                                onClick={() => openEditDialog(warehouse)}
-                                                            >
-                                                                <Edit size={16} />
-                                                                تعديل
-                                                            </DropdownMenuItem>
-                                                            {!warehouse.is_default && (
-                                                                <>
-                                                                    <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem
-                                                                        className="gap-2 text-destructive"
-                                                                        onClick={() => handleDelete(warehouse)}
-                                                                    >
-                                                                        <Trash2 size={16} />
-                                                                        حذف
-                                                                    </DropdownMenuItem>
-                                                                </>
-                                                            )}
+                                                            <IfCanUpdate resource="warehouses">
+                                                                <DropdownMenuItem
+                                                                    className="gap-2"
+                                                                    onClick={() => openEditDialog(warehouse)}
+                                                                >
+                                                                    <Edit size={16} />
+                                                                    تعديل
+                                                                </DropdownMenuItem>
+                                                            </IfCanUpdate>
+                                                            <IfCanDelete resource="warehouses">
+                                                                {!warehouse.is_default && (
+                                                                    <>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem
+                                                                            className="gap-2 text-destructive"
+                                                                            onClick={() => handleDelete(warehouse)}
+                                                                        >
+                                                                            <Trash2 size={16} />
+                                                                            حذف
+                                                                        </DropdownMenuItem>
+                                                                    </>
+                                                                )}
+                                                            </IfCanDelete>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>
@@ -374,10 +381,12 @@ export function WarehousesPage() {
                                 <p className="text-muted-foreground mb-4">
                                     ابدأ بإنشاء أول مخزن
                                 </p>
-                                <Button onClick={() => { resetForm(); setShowDialog(true); }}>
-                                    <Plus size={18} className="ml-2" />
-                                    مخزن جديد
-                                </Button>
+                                <IfCanCreate resource="warehouses">
+                                    <Button onClick={() => { resetForm(); setShowDialog(true); }}>
+                                        <Plus size={18} className="ml-2" />
+                                        مخزن جديد
+                                    </Button>
+                                </IfCanCreate>
                             </div>
                         )}
                     </CardContent>
