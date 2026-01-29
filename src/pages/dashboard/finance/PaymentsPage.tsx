@@ -129,11 +129,15 @@ export function PaymentsPage() {
     const [treasuryId, setTreasuryId] = useState('');
     const [customerId, setCustomerId] = useState('');
     const [supplierId, setSupplierId] = useState('');
+    const [invoiceId, setInvoiceId] = useState('');
     const [reference, setReference] = useState('');
     const [notes, setNotes] = useState('');
     const [chequeNumber, setChequeNumber] = useState('');
     const [chequeDate, setChequeDate] = useState('');
     const [chequeBank, setChequeBank] = useState('');
+
+    // Determine if this is a customer payment
+    const isCustomerPayment = ['customer_receipt', 'advance_payment', 'refund_to_customer'].includes(paymentType);
 
     // Fetch payments
     const { data: payments, isLoading } = useQuery({
@@ -201,6 +205,34 @@ export function PaymentsPage() {
             if (error) throw error;
             return data as Treasury[];
         },
+    });
+
+    // Fetch unpaid invoices for selected customer/supplier
+    const { data: unpaidInvoices } = useQuery({
+        queryKey: ['unpaid-invoices', isCustomerPayment, customerId, supplierId],
+        queryFn: async () => {
+            if (isCustomerPayment && customerId) {
+                const { data, error } = await supabase
+                    .from('invoices')
+                    .select('id, code, total_amount, paid_amount, remaining_amount')
+                    .eq('customer_id', customerId)
+                    .not('status', 'in', '("paid","cancelled","draft")')
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+                return data || [];
+            } else if (!isCustomerPayment && supplierId) {
+                const { data, error } = await supabase
+                    .from('invoices')
+                    .select('id, code, total_amount, paid_amount, remaining_amount')
+                    .eq('supplier_id', supplierId)
+                    .not('status', 'in', '("paid","cancelled","draft")')
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+                return data || [];
+            }
+            return [];
+        },
+        enabled: !!(isCustomerPayment ? customerId : supplierId),
     });
 
     // Real-time updates
@@ -282,6 +314,7 @@ export function PaymentsPage() {
         setTreasuryId('');
         setCustomerId('');
         setSupplierId('');
+        setInvoiceId('');
         setReference('');
         setNotes('');
         setChequeNumber('');
@@ -325,6 +358,7 @@ export function PaymentsPage() {
                     treasury_id: treasuryId,
                     customer_id: isCustomerPayment ? customerId : null,
                     supplier_id: !isCustomerPayment ? supplierId : null,
+                    invoice_id: invoiceId || null,
                     reference: reference || null,
                     notes: notes || null,
                     cheque_number: paymentMethod === 'cheque' ? chequeNumber : null,
@@ -345,8 +379,6 @@ export function PaymentsPage() {
             alert(error.message || 'فشل إنشاء السند');
         },
     });
-
-    const isCustomerPayment = ['customer_receipt', 'advance_payment', 'refund_to_customer'].includes(paymentType);
 
     return (
         <div className="space-y-6">
@@ -571,7 +603,7 @@ export function PaymentsPage() {
                         {isCustomerPayment ? (
                             <div className="space-y-2">
                                 <Label>العميل *</Label>
-                                <Select value={customerId} onValueChange={setCustomerId}>
+                                <Select value={customerId} onValueChange={(v) => { setCustomerId(v); setInvoiceId(''); }}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="اختر العميل" />
                                     </SelectTrigger>
@@ -585,13 +617,33 @@ export function PaymentsPage() {
                         ) : (
                             <div className="space-y-2">
                                 <Label>المورد *</Label>
-                                <Select value={supplierId} onValueChange={setSupplierId}>
+                                <Select value={supplierId} onValueChange={(v) => { setSupplierId(v); setInvoiceId(''); }}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="اختر المورد" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {suppliers?.map(s => (
                                             <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        {/* ربط بفاتورة - اختياري */}
+                        {(isCustomerPayment ? customerId : supplierId) && unpaidInvoices && unpaidInvoices.length > 0 && (
+                            <div className="space-y-2">
+                                <Label>ربط بفاتورة (اختياري)</Label>
+                                <Select value={invoiceId || 'none'} onValueChange={(v) => setInvoiceId(v === 'none' ? '' : v)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="اختر فاتورة لربط الدفعة بها" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">بدون ربط</SelectItem>
+                                        {unpaidInvoices.map(inv => (
+                                            <SelectItem key={inv.id} value={inv.id}>
+                                                {inv.code} - المتبقي: {formatCurrency(inv.remaining_amount || (inv.total_amount - inv.paid_amount))}
+                                            </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
