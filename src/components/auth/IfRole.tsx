@@ -177,4 +177,26 @@ export function IfCanApprove({
     );
 }
 
+/**
+ * ============================================================
+ * IfCanCancel - إظهار إذا كان يمكنه الإلغاء
+ * ============================================================
+ */
+export function IfCanCancel({
+    resource,
+    children,
+    fallback
+}: {
+    resource: PermissionResource;
+    children: React.ReactNode;
+    fallback?: React.ReactNode
+}) {
+    return (
+        <IfRole resource={resource} action="cancel" fallback={fallback}>
+            {children}
+        </IfRole>
+    );
+}
+
 export default IfRole;
+

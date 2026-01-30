@@ -41,9 +41,19 @@ import {
 } from '@/components/ui/select';
 import { PaymentModal } from '@/components/finance';
 import { PageHeader, EmptyState } from '@/components/shared';
-import { IfCanCreate } from '@/components/auth';
+import { IfCanCreate, IfCanCancel } from '@/components/auth';
 import { useRealtime } from '@/hooks';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 // ============================================================
 // Invoices Page - صفحة الفواتير
@@ -108,6 +118,11 @@ export function InvoicesPage() {
         customer_name?: string;
     } | null>(null);
 
+    // Cancellation dialog state
+    const [showCancelDialog, setShowCancelDialog] = useState(false);
+    const [invoiceToCancel, setInvoiceToCancel] = useState<Invoice | null>(null);
+    const [cancellationReason, setCancellationReason] = useState('');
+
     // Fetch invoices
     const { data: invoices, isLoading } = useQuery({
         queryKey: ['invoices', searchQuery, typeFilter, statusFilter],
@@ -171,9 +186,9 @@ export function InvoicesPage() {
     const stats = React.useMemo(() => {
         if (!invoices) return { total: 0, totalSales: 0, unpaid: 0, overdue: 0 };
 
-        const salesInvoices = invoices.filter(i => i.invoice_type === 'sales');
+        const salesInvoices = invoices.filter(i => i.invoice_type === 'sales' && i.status !== 'cancelled');
         const totalSales = salesInvoices.reduce((sum, i) => sum + i.total_amount, 0);
-        const unpaid = invoices.filter(i => i.remaining_amount > 0 && i.status !== 'cancelled').length;
+        const unpaid = invoices.filter(i => i.remaining_amount > 0 && i.status !== 'cancelled' && i.status !== 'draft').length;
         const today = new Date().toISOString().split('T')[0];
         const overdue = invoices.filter(i =>
             i.due_date && i.due_date < today && i.remaining_amount > 0
@@ -207,15 +222,22 @@ export function InvoicesPage() {
 
     // Cancel invoice mutation
     const cancelMutation = useMutation({
-        mutationFn: async (id: string) => {
+        mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
             const { error } = await supabase
                 .from('invoices')
-                .update({ status: 'cancelled' })
+                .update({
+                    status: 'cancelled',
+                    cancellation_reason: reason,
+                    cancelled_at: new Date().toISOString()
+                })
                 .eq('id', id);
             if (error) throw error;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['invoices'] });
+            setShowCancelDialog(false);
+            setInvoiceToCancel(null);
+            setCancellationReason('');
         },
         onError: (error: Error) => {
             console.error('Error cancelling invoice:', error);
@@ -474,20 +496,21 @@ export function InvoicesPage() {
                                                             </button>
                                                         )}
 
-                                                        {/* Cancel button - only for draft */}
-                                                        {invoice.status === 'draft' && (
-                                                            <button
-                                                                onClick={() => {
-                                                                    if (confirm('هل أنت متأكد من إلغاء هذه الفاتورة؟')) {
-                                                                        cancelMutation.mutate(invoice.id);
-                                                                    }
-                                                                }}
-                                                                disabled={cancelMutation.isPending}
-                                                                className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors disabled:opacity-50"
-                                                                title="إلغاء"
-                                                            >
-                                                                <XCircle size={15} />
-                                                            </button>
+                                                        {/* Cancel button - for approved/partial invoices with permission */}
+                                                        {invoice.status !== 'cancelled' && invoice.status !== 'paid' && (
+                                                            <IfCanCancel resource="invoices">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setInvoiceToCancel(invoice);
+                                                                        setShowCancelDialog(true);
+                                                                    }}
+                                                                    disabled={cancelMutation.isPending}
+                                                                    className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors disabled:opacity-50"
+                                                                    title="إلغاء الفاتورة"
+                                                                >
+                                                                    <XCircle size={15} />
+                                                                </button>
+                                                            </IfCanCancel>
                                                         )}
 
                                                         {/* Print button - navigate to details page for printing */}
@@ -516,6 +539,74 @@ export function InvoicesPage() {
                 onOpenChange={setShowPaymentModal}
                 invoice={selectedInvoice}
             />
+
+            {/* Cancellation Dialog */}
+            <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-destructive flex items-center gap-2">
+                            <XCircle size={20} />
+                            إلغاء الفاتورة
+                        </DialogTitle>
+                        <DialogDescription>
+                            {invoiceToCancel && (
+                                <span>
+                                    سيتم إلغاء الفاتورة <strong>{invoiceToCancel.code}</strong> بقيمة{' '}
+                                    <strong>{formatCurrency(invoiceToCancel.total_amount)}</strong>
+                                </span>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-sm">
+                            <p className="font-medium">⚠️ تحذير:</p>
+                            <ul className="list-disc list-inside mt-1 space-y-1">
+                                <li>سيتم استرجاع المخزون المصروف</li>
+                                <li>سيتم عكس تأثير الفاتورة على رصيد العميل/المورد</li>
+                                <li>هذا الإجراء لا يمكن التراجع عنه</li>
+                            </ul>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="cancellation-reason" className="text-destructive">
+                                سبب الإلغاء *
+                            </Label>
+                            <Textarea
+                                id="cancellation-reason"
+                                placeholder="يرجى إدخال سبب إلغاء الفاتورة..."
+                                value={cancellationReason}
+                                onChange={(e) => setCancellationReason(e.target.value)}
+                                className="min-h-[100px]"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setShowCancelDialog(false);
+                                setInvoiceToCancel(null);
+                                setCancellationReason('');
+                            }}
+                        >
+                            تراجع
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            disabled={!cancellationReason.trim() || cancelMutation.isPending}
+                            onClick={() => {
+                                if (invoiceToCancel && cancellationReason.trim()) {
+                                    cancelMutation.mutate({
+                                        id: invoiceToCancel.id,
+                                        reason: cancellationReason.trim()
+                                    });
+                                }
+                            }}
+                        >
+                            {cancelMutation.isPending ? 'جاري الإلغاء...' : 'تأكيد الإلغاء'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

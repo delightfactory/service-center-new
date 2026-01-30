@@ -17,7 +17,7 @@ export type UserRole =
     | 'accountant'; // محاسب
 
 // تعريف الإجراءات الممكنة
-export type PermissionAction = 'read' | 'create' | 'update' | 'delete' | 'approve' | 'manage';
+export type PermissionAction = 'read' | 'create' | 'update' | 'delete' | 'approve' | 'manage' | 'cancel';
 
 // تعريف الموارد
 export type PermissionResource =
@@ -153,6 +153,7 @@ export const PERMISSIONS: Record<PermissionResource, Partial<Record<PermissionAc
         update: ['admin', 'manager', 'accountant'],
         delete: ['admin'],
         approve: ['admin', 'manager', 'accountant'],
+        cancel: ['admin', 'manager'], // إلغاء الفاتورة - المالك والمدير فقط
     },
 
     // المدفوعات
@@ -160,7 +161,7 @@ export const PERMISSIONS: Record<PermissionResource, Partial<Record<PermissionAc
         read: ['admin', 'manager', 'accountant'],
         create: ['admin', 'manager', 'accountant'],
         update: ['admin', 'manager', 'accountant'],
-        delete: ['admin'],
+        delete: ['admin', 'manager'], // حذف الدفعة - المالك والمدير فقط
     },
 
     // المصروفات
@@ -212,6 +213,7 @@ export const PERMISSIONS: Record<PermissionResource, Partial<Record<PermissionAc
         update: ['admin', 'manager', 'supervisor', 'engineer'],
         delete: ['admin', 'manager'],
         approve: ['admin', 'manager', 'supervisor'],
+        cancel: ['admin', 'manager'], // إلغاء أمر الشغل - المالك والمدير فقط
     },
 
     // المهام

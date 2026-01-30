@@ -272,7 +272,7 @@ export function CustomerDetailsPage() {
     // Stats
     const stats = {
         vehiclesCount: vehicles?.length || 0,
-        totalInvoices: invoices?.reduce((sum, inv) => sum + inv.total_amount, 0) || 0,
+        totalInvoices: invoices?.filter(inv => inv.status !== 'cancelled' && inv.status !== 'draft').reduce((sum, inv) => sum + inv.total_amount, 0) || 0,
         totalPaid: payments?.reduce((sum, p) => sum + p.amount, 0) || 0,
         // المستحق = إجمالي الفواتير - إجمالي المدفوعات (وليس من remaining_amount)
         get pendingAmount() {

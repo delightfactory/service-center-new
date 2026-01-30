@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
     Plus, Search, Receipt, ArrowDownCircle, ArrowUpCircle,
     CreditCard, Banknote, Building, Wallet, Filter, Download,
-    Calendar, User, Truck, FileText, Printer
+    Calendar, User, Truck, FileText, Printer, Trash2, XCircle
 } from 'lucide-react';
 import {
     Dialog,
@@ -50,6 +50,7 @@ import {
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { PageHeader, EmptyState } from '@/components/shared';
 import { useRealtime } from '@/hooks';
+import { IfCanDelete } from '@/components/auth';
 
 // ============================================================
 // Payments Page - صفحة المدفوعات
@@ -135,6 +136,11 @@ export function PaymentsPage() {
     const [chequeNumber, setChequeNumber] = useState('');
     const [chequeDate, setChequeDate] = useState('');
     const [chequeBank, setChequeBank] = useState('');
+
+    // Delete payment state
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
+    const [deleteReason, setDeleteReason] = useState('');
 
     // Determine if this is a customer payment
     const isCustomerPayment = ['customer_receipt', 'advance_payment', 'refund_to_customer'].includes(paymentType);
@@ -380,6 +386,28 @@ export function PaymentsPage() {
         },
     });
 
+    // Delete payment mutation
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
+            const { error } = await supabase
+                .from('payments')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['payments'] });
+            queryClient.invalidateQueries({ queryKey: ['invoices'] });
+            queryClient.invalidateQueries({ queryKey: ['treasuries'] });
+            setShowDeleteDialog(false);
+            setPaymentToDelete(null);
+            setDeleteReason('');
+        },
+        onError: (error: Error) => {
+            alert(error.message || 'فشل حذف الدفعة');
+        },
+    });
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -509,6 +537,7 @@ export function PaymentsPage() {
                                                 <TableHead>طريقة الدفع</TableHead>
                                                 <TableHead>الخزينة</TableHead>
                                                 <TableHead>التاريخ</TableHead>
+                                                <TableHead>إجراءات</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -562,6 +591,21 @@ export function PaymentsPage() {
                                                         <TableCell>{payment.treasury?.name || '-'}</TableCell>
                                                         <TableCell className="text-muted-foreground text-sm">
                                                             {formatDate(payment.payment_date)}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <IfCanDelete resource="payments">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setPaymentToDelete(payment);
+                                                                        setShowDeleteDialog(true);
+                                                                    }}
+                                                                    disabled={deleteMutation.isPending}
+                                                                    className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors disabled:opacity-50"
+                                                                    title="حذف الدفعة"
+                                                                >
+                                                                    <Trash2 size={15} />
+                                                                </button>
+                                                            </IfCanDelete>
                                                         </TableCell>
                                                     </TableRow>
                                                 );
@@ -764,6 +808,72 @@ export function PaymentsPage() {
                             disabled={createMutation.isPending}
                         >
                             {createMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Payment Dialog */}
+            <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-destructive flex items-center gap-2">
+                            <Trash2 size={20} />
+                            حذف الدفعة
+                        </DialogTitle>
+                        <DialogDescription>
+                            {paymentToDelete && (
+                                <span>
+                                    سيتم حذف الدفعة <strong>{paymentToDelete.code}</strong> بقيمة{' '}
+                                    <strong>{formatCurrency(paymentToDelete.amount)}</strong>
+                                </span>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-sm">
+                            <p className="font-medium">⚠️ تحذير:</p>
+                            <ul className="list-disc list-inside mt-1 space-y-1">
+                                <li>سيتم عكس تأثير الدفعة على رصيد العميل/المورد</li>
+                                <li>سيتم تحديث حالة الفاتورة المرتبطة (إن وجدت)</li>
+                                <li>سيتم إنشاء حركة عكسية في الخزينة</li>
+                                <li>هذا الإجراء لا يمكن التراجع عنه</li>
+                            </ul>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="delete-reason" className="text-destructive">
+                                سبب الحذف *
+                            </Label>
+                            <Textarea
+                                id="delete-reason"
+                                placeholder="يرجى إدخال سبب حذف الدفعة..."
+                                value={deleteReason}
+                                onChange={(e) => setDeleteReason(e.target.value)}
+                                className="min-h-[100px]"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setShowDeleteDialog(false);
+                                setPaymentToDelete(null);
+                                setDeleteReason('');
+                            }}
+                        >
+                            تراجع
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            disabled={!deleteReason.trim() || deleteMutation.isPending}
+                            onClick={() => {
+                                if (paymentToDelete && deleteReason.trim()) {
+                                    deleteMutation.mutate(paymentToDelete.id);
+                                }
+                            }}
+                        >
+                            {deleteMutation.isPending ? 'جاري الحذف...' : 'تأكيد الحذف'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

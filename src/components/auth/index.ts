@@ -24,7 +24,8 @@ export {
     IfCanDelete,
     IfCanCreate,
     IfCanUpdate,
-    IfCanApprove
+    IfCanApprove,
+    IfCanCancel
 } from './IfRole';
 
 // Permissions Hook
