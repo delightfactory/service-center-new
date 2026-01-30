@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { LowStockAlertsCard } from '@/components/inventory/LowStockAlertsCard';
+import { IfRole } from '@/components/auth';
 
 // ============================================================
 // Dashboard Page - لوحة التحكم المحسنة للمدير
@@ -416,23 +417,26 @@ export function DashboardPage() {
                     isLoading={statsLoading}
                     trend={stats ? getPercentChange(stats.today_completed, stats.yesterday_completed) : undefined}
                 />
-                <StatCard
-                    title="إيرادات اليوم"
-                    value={formatCurrency(stats?.today_revenue ?? 0)}
-                    icon={Wallet}
-                    color="primary"
-                    isLoading={statsLoading}
-                    trend={stats ? getPercentChange(stats.today_revenue, stats.yesterday_revenue) : undefined}
-                    onClick={() => navigate('/dashboard/finance/invoices')}
-                />
-                <StatCard
-                    title="مستحقات العملاء"
-                    value={formatCurrency(stats?.total_receivables ?? 0)}
-                    icon={CreditCard}
-                    color="destructive"
-                    isLoading={statsLoading}
-                    onClick={() => navigate('/dashboard/customers')}
-                />
+                {/* Financial Stats - Owner/Manager Only */}
+                <IfRole roles={['admin', 'manager']}>
+                    <StatCard
+                        title="إيرادات اليوم"
+                        value={formatCurrency(stats?.today_revenue ?? 0)}
+                        icon={Wallet}
+                        color="primary"
+                        isLoading={statsLoading}
+                        trend={stats ? getPercentChange(stats.today_revenue, stats.yesterday_revenue) : undefined}
+                        onClick={() => navigate('/dashboard/finance/invoices')}
+                    />
+                    <StatCard
+                        title="مستحقات العملاء"
+                        value={formatCurrency(stats?.total_receivables ?? 0)}
+                        icon={CreditCard}
+                        color="destructive"
+                        isLoading={statsLoading}
+                        onClick={() => navigate('/dashboard/customers')}
+                    />
+                </IfRole>
             </div>
 
             {/* Second Row - Urgent Jobs & Technicians */}
@@ -652,41 +656,43 @@ export function DashboardPage() {
                 </Card>
             </div>
 
-            {/* Financial Summary and Low Stock Alerts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Financial Summary - Takes 2 columns on large screens */}
-                <Card className="lg:col-span-2">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <Wallet size={18} className="text-primary" />
-                            الملخص المالي
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                                <p className="text-sm text-muted-foreground mb-1">المُحصل اليوم</p>
-                                <p className="text-xl font-bold text-green-600">{formatCurrency(stats?.today_collected ?? 0)}</p>
+            {/* Financial Summary and Low Stock Alerts Row - Owner/Manager Only */}
+            <IfRole roles={['admin', 'manager']}>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    {/* Financial Summary - Takes 2 columns on large screens */}
+                    <Card className="lg:col-span-2">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <Wallet size={18} className="text-primary" />
+                                الملخص المالي
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                                    <p className="text-sm text-muted-foreground mb-1">المُحصل اليوم</p>
+                                    <p className="text-xl font-bold text-green-600">{formatCurrency(stats?.today_collected ?? 0)}</p>
+                                </div>
+                                <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                    <p className="text-sm text-muted-foreground mb-1">رصيد الخزينة</p>
+                                    <p className="text-xl font-bold text-blue-600">{formatCurrency(stats?.treasury_balance ?? 0)}</p>
+                                </div>
+                                <div className="text-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                                    <p className="text-sm text-muted-foreground mb-1">مستحقات العملاء</p>
+                                    <p className="text-xl font-bold text-amber-600">{formatCurrency(stats?.total_receivables ?? 0)}</p>
+                                </div>
+                                <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                                    <p className="text-sm text-muted-foreground mb-1">مستحقات الموردين</p>
+                                    <p className="text-xl font-bold text-red-600">{formatCurrency(stats?.total_payables ?? 0)}</p>
+                                </div>
                             </div>
-                            <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                                <p className="text-sm text-muted-foreground mb-1">رصيد الخزينة</p>
-                                <p className="text-xl font-bold text-blue-600">{formatCurrency(stats?.treasury_balance ?? 0)}</p>
-                            </div>
-                            <div className="text-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                                <p className="text-sm text-muted-foreground mb-1">مستحقات العملاء</p>
-                                <p className="text-xl font-bold text-amber-600">{formatCurrency(stats?.total_receivables ?? 0)}</p>
-                            </div>
-                            <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                                <p className="text-sm text-muted-foreground mb-1">مستحقات الموردين</p>
-                                <p className="text-xl font-bold text-red-600">{formatCurrency(stats?.total_payables ?? 0)}</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
 
-                {/* Low Stock Alerts - Takes 1 column on large screens */}
-                <LowStockAlertsCard limit={5} />
-            </div>
+                    {/* Low Stock Alerts - Takes 1 column on large screens */}
+                    <LowStockAlertsCard limit={5} />
+                </div>
+            </IfRole>
         </div>
     );
 }
