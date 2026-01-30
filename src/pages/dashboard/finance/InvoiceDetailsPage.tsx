@@ -78,7 +78,7 @@ interface Invoice {
     created_at: string;
     customer?: { id: string; name: string; phone: string };
     supplier?: { id: string; name: string };
-    job_order?: { id: string; code: string };
+    job_order?: { id: string; code: string; vehicle?: { plate_number: string; make: string; model: string } };
 }
 
 interface Payment {
@@ -167,7 +167,7 @@ export function InvoiceDetailsPage() {
                     *,
                     customer:customers(id, name, phone),
                     supplier:suppliers(id, name),
-                    job_order:job_orders(id, code)
+                    job_order:job_orders(id, code, vehicle:vehicles(plate_number, make, model))
                 `)
                 .eq('id', id)
                 .single();
@@ -176,7 +176,13 @@ export function InvoiceDetailsPage() {
                 ...data,
                 customer: Array.isArray(data.customer) ? data.customer[0] : data.customer,
                 supplier: Array.isArray(data.supplier) ? data.supplier[0] : data.supplier,
-                job_order: Array.isArray(data.job_order) ? data.job_order[0] : data.job_order,
+                job_order: (() => {
+                    const jo = Array.isArray(data.job_order) ? data.job_order[0] : data.job_order;
+                    if (jo?.vehicle) {
+                        jo.vehicle = Array.isArray(jo.vehicle) ? jo.vehicle[0] : jo.vehicle;
+                    }
+                    return jo;
+                })(),
             } as Invoice;
         },
         enabled: !!id,
@@ -678,6 +684,11 @@ export function InvoiceDetailsPage() {
                         customer: invoice.customer ? {
                             name: invoice.customer.name,
                             phone: invoice.customer.phone,
+                        } : undefined,
+                        vehicle: invoice.job_order?.vehicle ? {
+                            plate_number: invoice.job_order.vehicle.plate_number,
+                            make: invoice.job_order.vehicle.make,
+                            model: invoice.job_order.vehicle.model,
                         } : undefined,
                     }}
                     items={(invoiceItems || []).map(item => ({

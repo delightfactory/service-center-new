@@ -420,12 +420,7 @@ function JobCard({ job, onNavigate, onClockToggle, isActive = false, isInReview 
                         <p className="text-sm font-mono text-muted-foreground mb-2">
                             {job.vehicle?.plate_number}
                         </p>
-                        {job.customer && (
-                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                <User2 size={14} />
-                                <span>{job.customer.name}</span>
-                            </div>
-                        )}
+                        {/* تم إخفاء بيانات العميل عن الفني */}
                     </div>
                 </div>
             </div>
