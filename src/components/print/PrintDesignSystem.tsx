@@ -12,7 +12,7 @@ import { Phone, MapPin, Mail, Globe } from 'lucide-react';
 export const PRINT_CONFIG = {
     centerName: 'مركز أبو زياد لصيانة السيارات',
     centerNameEn: 'Abu Ziad Auto Service Center',
-    logoUrl: '/icons/android-chrome-192x192.png',
+    logoUrl: '/icons/android-chrome-192x192.webp',
     address: 'طنطا -شارع توت عنخ امون',
     phone: '01097079970',
     phone2: '01001443442',

@@ -210,7 +210,13 @@ export function DashboardLayout() {
                 {/* Logo */}
                 <div className="flex h-16 items-center justify-between px-4 border-b border-border">
                     {sidebarOpen && (
-                        <h1 className="text-lg font-bold">مركز الصيانة</h1>
+                        <div className="flex items-center gap-2">
+                            <img src="/icons/android-chrome-192x192.webp" alt="Logo" className="h-10 w-10 object-contain" />
+                            <h1 className="text-lg font-bold">مركز أبو زياد</h1>
+                        </div>
+                    )}
+                    {!sidebarOpen && (
+                        <img src="/icons/android-chrome-192x192.webp" alt="Logo" className="h-8 w-8 object-contain mx-auto" />
                     )}
                     <Button
                         variant="ghost"

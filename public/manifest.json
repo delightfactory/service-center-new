@@ -1,37 +1,37 @@
 {
     "id": "/",
-    "name": "مركز الصيانة",
-    "short_name": "المركز",
-    "description": "نظام إدارة مركز صيانة السيارات - نظام متكامل لإدارة أوامر الشغل والمخزون والفواتير",
+    "name": "مركز أبو زياد لصيانة السيارات",
+    "short_name": "أبو زياد",
+    "description": "نظام إدارة مركز أبو زياد لصيانة السيارات - نظام متكامل لإدارة أوامر الشغل والمخزون والفواتير",
     "start_url": "/",
     "scope": "/",
     "display": "standalone",
-    "background_color": "#0f172a",
-    "theme_color": "#3b82f6",
+    "background_color": "#0B1724",
+    "theme_color": "#0B1724",
     "orientation": "any",
     "icons": [
         {
-            "src": "/icons/android-chrome-192x192.png",
+            "src": "/icons/android-chrome-192x192.webp",
             "sizes": "192x192",
-            "type": "image/png",
+            "type": "image/webp",
             "purpose": "any"
         },
         {
-            "src": "/icons/android-chrome-512x512.png",
+            "src": "/icons/android-chrome-512x512.webp",
             "sizes": "512x512",
-            "type": "image/png",
+            "type": "image/webp",
             "purpose": "any"
         },
         {
-            "src": "/icons/maskable-icon-192x192.png",
+            "src": "/icons/maskable-icon-192x192.webp",
             "sizes": "192x192",
-            "type": "image/png",
+            "type": "image/webp",
             "purpose": "maskable"
         },
         {
-            "src": "/icons/maskable-icon-512x512.png",
+            "src": "/icons/maskable-icon-512x512.webp",
             "sizes": "512x512",
-            "type": "image/png",
+            "type": "image/webp",
             "purpose": "maskable"
         }
     ],
