@@ -88,36 +88,51 @@ export function JobItemsSection({
                 ) : (
                     <div className="space-y-2">
                         {items.map((item) => (
-                            <div key={item.id} className="flex items-center justify-between p-2.5 rounded-lg border group hover:bg-muted/50">
-                                <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-xs">{JOB_ITEM_TYPES[item.item_type]}</Badge>
-                                    <span className="text-sm">{item.description}</span>
-                                    {item.is_dispensed && (
-                                        <Badge variant="secondary" className="text-[10px] h-5 bg-green-100 text-green-700 hover:bg-green-100 flex items-center gap-1">
-                                            <Package size={10} />
-                                            تم الصرف
-                                        </Badge>
-                                    )}
+                            <div key={item.id} className="p-2.5 rounded-lg border group hover:bg-muted/50">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="text-xs">{JOB_ITEM_TYPES[item.item_type]}</Badge>
+                                        <span className="text-sm">{item.description}</span>
+                                        {item.is_dispensed && (
+                                            <Badge variant="secondary" className="text-[10px] h-5 bg-green-100 text-green-700 hover:bg-green-100 flex items-center gap-1">
+                                                <Package size={10} />
+                                                تم الصرف
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-semibold">{formatCurrency(item.total_price)}</span>
+                                        <span className="text-xs text-muted-foreground">({item.quantity}×{formatCurrency(item.unit_price)})</span>
+                                        {!item.is_completed && canUpdateJobOrder && (
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditItem(item)}>
+                                                    <Edit size={14} />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7 text-destructive"
+                                                    onClick={() => { if (confirm('هل تريد حذف هذا البند؟')) onDeleteItem(item.id); }}
+                                                >
+                                                    <Trash2 size={14} />
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-semibold">{formatCurrency(item.total_price)}</span>
-                                    <span className="text-xs text-muted-foreground">({item.quantity}×{formatCurrency(item.unit_price)})</span>
-                                    {!item.is_completed && canUpdateJobOrder && (
-                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditItem(item)}>
-                                                <Edit size={14} />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-7 w-7 text-destructive"
-                                                onClick={() => { if (confirm('هل تريد حذف هذا البند؟')) onDeleteItem(item.id); }}
-                                            >
-                                                <Trash2 size={14} />
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
+                                {/* عرض مكونات الخدمة المركبة */}
+                                {item.product?.is_composite && item.product.components && item.product.components.length > 0 && (
+                                    <div className="mr-8 mt-2 pt-2 border-t border-dashed space-y-1">
+                                        <span className="text-xs text-muted-foreground font-medium">المكونات:</span>
+                                        {item.product.components.map(comp => (
+                                            <div key={comp.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" />
+                                                <span>{comp.component?.name || 'منتج'}</span>
+                                                <span className="text-muted-foreground/70">×{comp.quantity}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         ))}
                         {/* الإجماليات */}

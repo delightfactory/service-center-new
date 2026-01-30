@@ -124,18 +124,56 @@ export function JobOrderDetailsPage() {
         enabled: !!id,
     });
 
-    // Fetch job items
+    // Fetch job items with product info for composite services
     const { data: jobItems } = useQuery({
         queryKey: ['job-items', id],
         queryFn: async () => {
+            // استعلام بسيط للبنود أولاً
             const { data, error } = await supabase
                 .from('job_items')
                 .select('*')
                 .eq('job_order_id', id)
                 .order('created_at');
 
-            if (error) throw error;
-            return data as JobItem[];
+            if (error) {
+                console.error('Error fetching job items:', error);
+                throw error;
+            }
+
+            // جلب معلومات المكونات للخدمات المركبة بشكل منفصل
+            const itemsWithProducts = await Promise.all(
+                data.map(async (item) => {
+                    if (!item.product_id) return item;
+
+                    // جلب معلومات المنتج
+                    const { data: product } = await supabase
+                        .from('products')
+                        .select('is_composite')
+                        .eq('id', item.product_id)
+                        .single();
+
+                    if (!product?.is_composite) return { ...item, product };
+
+                    // جلب مكونات الخدمة المركبة
+                    const { data: components } = await supabase
+                        .from('service_components')
+                        .select('id, quantity, component:component_id(id, name)')
+                        .eq('service_id', item.product_id);
+
+                    return {
+                        ...item,
+                        product: {
+                            ...product,
+                            components: components?.map(c => ({
+                                ...c,
+                                component: Array.isArray(c.component) ? c.component[0] : c.component
+                            })) || []
+                        }
+                    };
+                })
+            );
+
+            return itemsWithProducts as JobItem[];
         },
         enabled: !!id,
     });

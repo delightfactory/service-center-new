@@ -53,6 +53,18 @@ export interface JobItem {
     notes: string | null;
     is_completed: boolean;
     is_dispensed?: boolean;
+    // معلومات المنتج للخدمات المركبة
+    product?: {
+        is_composite: boolean;
+        components?: {
+            id: string;
+            quantity: number;
+            component: {
+                id: string;
+                name: string;
+            };
+        }[];
+    } | null;
 }
 
 export interface JobTask {
