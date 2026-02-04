@@ -46,11 +46,11 @@ const router = createBrowserRouter([
                 index: true,
                 element: <DashboardPage />,
             },
-            // Reports - للإدارة والمشرفين والمحاسب
+            // Reports - للإدارة فقط (الأدمن والمدير)
             {
                 path: 'reports',
                 element: (
-                    <RoleGuard allowedRoles={['admin', 'manager', 'supervisor', 'accountant']}>
+                    <RoleGuard allowedRoles={['admin', 'manager']}>
                         <ReportsPage />
                     </RoleGuard>
                 ),

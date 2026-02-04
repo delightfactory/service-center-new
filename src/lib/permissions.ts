@@ -62,9 +62,9 @@ export const PERMISSIONS: Record<PermissionResource, Partial<Record<PermissionAc
         read: ['admin', 'manager', 'supervisor', 'engineer', 'warehouse', 'accountant'],
     },
 
-    // التقارير
+    // التقارير - متاحة للإدارة فقط
     reports: {
-        read: ['admin', 'manager', 'supervisor', 'accountant'],
+        read: ['admin', 'manager'],
     },
 
     // الاستقبال
