@@ -16,8 +16,10 @@ import {
     EntryTypeSelector,
     CustomerVehicleStep,
     VehicleDetailsStep,
+    VehicleInspectionStep,
     Breadcrumbs,
 } from '@/components/shared';
+import { createEmptyInspectionData, type InspectionData } from '@/lib/constants/inspection-items';
 import type { EntryType } from '@/types/enums';
 import type { Customer, Vehicle } from '@/types/database';
 
@@ -44,6 +46,7 @@ interface WizardState {
         fuel_level?: number;
         mileage?: string;
     };
+    inspectionData: InspectionData;
     customerComplaint: string;
     diagnosisNotes: string;
 }
@@ -56,6 +59,7 @@ const initialState: WizardState = {
     vehicleDetails: {
         fuel_level: 50,
     },
+    inspectionData: createEmptyInspectionData(),
     customerComplaint: '',
     diagnosisNotes: '',
 };
@@ -64,6 +68,7 @@ const STEP_TITLES = [
     'نوع الاستلام',
     'العميل والسيارة',
     'تفاصيل إضافية',
+    'فحص المركبة',
     'شكوى العميل',
 ];
 
@@ -183,9 +188,19 @@ export function ReceptionWizardPage() {
         nextStep();
     };
 
-    // Handle skip details (Step 3)
+    // Handle skip details (Step 3) - go to Step 4 (inspection)
     const handleSkipDetails = () => {
         goToStep(4);
+    };
+
+    // Handle skip inspection (Step 4) - go to Step 5 (complaints)
+    const handleSkipInspection = () => {
+        goToStep(5);
+    };
+
+    // Handle inspection data change
+    const handleInspectionChange = (data: InspectionData) => {
+        setState(prev => ({ ...prev, inspectionData: data }));
     };
 
     // Handle final submission
@@ -212,7 +227,7 @@ export function ReceptionWizardPage() {
                 });
             }
 
-            // Create assessment
+            // Create assessment with inspection notes
             const assessmentData: CreateAssessmentDTO = {
                 customer_id: state.customer!.id,
                 vehicle_id: state.vehicle?.id || null,
@@ -224,6 +239,7 @@ export function ReceptionWizardPage() {
                 fuel_level: state.vehicleDetails.fuel_level,
                 customer_complaint: state.customerComplaint.trim(),
                 initial_diagnosis: state.diagnosisNotes.trim() || undefined,
+                inspection_notes: state.inspectionData as any,
             };
 
             const assessment = await assessmentService.create(assessmentData);
@@ -263,13 +279,13 @@ export function ReceptionWizardPage() {
                             {STEP_TITLES[state.step - 1]}
                         </h1>
                         <span className="text-sm text-muted-foreground">
-                            {state.step} / 4
+                            {state.step} / 5
                         </span>
                     </div>
 
                     {/* Progress bar */}
                     <div className="flex gap-1">
-                        {[1, 2, 3, 4].map((step) => (
+                        {[1, 2, 3, 4, 5].map((step) => (
                             <div
                                 key={step}
                                 className={cn(
@@ -364,8 +380,18 @@ export function ReceptionWizardPage() {
                     />
                 )}
 
-                {/* Step 4: Diagnosis */}
+                {/* Step 4: Vehicle Inspection (Optional) */}
                 {state.step === 4 && (
+                    <VehicleInspectionStep
+                        values={state.inspectionData}
+                        onChange={handleInspectionChange}
+                        onSkip={handleSkipInspection}
+                        onNext={nextStep}
+                    />
+                )}
+
+                {/* Step 5: Diagnosis */}
+                {state.step === 5 && (
                     <div className="space-y-6">
                         <div>
                             <Label htmlFor="complaint" className="text-base font-semibold mb-2 block">

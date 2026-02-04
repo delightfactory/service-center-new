@@ -104,6 +104,186 @@ const PRIORITY_OPTIONS: { value: PriorityLevel; label: string; color: string }[]
     { value: 'urgent', label: 'عاجلة', color: 'text-red-500' },
 ];
 
+// ============================================================
+// Inspection Notes Display Component
+// ============================================================
+interface InspectionNotesDisplayProps {
+    data: Record<string, unknown>;
+}
+
+const STATUS_ICONS: Record<string, { icon: React.ReactNode; color: string }> = {
+    works: { icon: <CheckCircle2 size={16} />, color: 'text-green-500' },
+    not_working: { icon: <AlertCircle size={16} />, color: 'text-red-500' },
+    not_checked: { icon: <Clock size={16} />, color: 'text-gray-400' },
+};
+
+const CATEGORY_LABELS_AR: Record<string, string> = {
+    electrical: 'البنود الكهربائية',
+    mechanical: 'البنود الميكانيكية',
+    exterior: 'الحالة الخارجية',
+    safety: 'أنظمة السلامة',
+};
+
+const STATUS_LABELS_AR: Record<string, string> = {
+    works: 'يعمل',
+    not_working: 'لا يعمل',
+    not_checked: 'غير محدد',
+};
+
+function InspectionNotesDisplay({ data }: InspectionNotesDisplayProps) {
+    const items = (data.items as Array<{
+        key: string;
+        status: string;
+        notes: string;
+        photos: string[];
+    }>) || [];
+
+    const additionalNotes = (data.additionalNotes as string) || '';
+    const additionalWorkRequest = (data.additionalWorkRequest as string) || '';
+    const inspectionPhotos = (data.inspectionPhotos as string[]) || [];
+
+    // Group items by category
+    const itemsByCategory: Record<string, typeof items> = {};
+    const categoryMap: Record<string, string> = {
+        ac: 'electrical', power_windows: 'electrical', central_lock: 'electrical',
+        dashboard_lights: 'electrical', all_lights: 'electrical', wipers: 'electrical',
+        dashboard_indicators: 'electrical', engine_condition: 'mechanical',
+        car_fans: 'mechanical', battery: 'mechanical', glass_cracks: 'exterior',
+        mirrors: 'exterior', scratches_dents: 'exterior', tires: 'exterior',
+        dashboard_cover: 'exterior', srs: 'safety', abs: 'safety',
+    };
+
+    items.forEach(item => {
+        const category = categoryMap[item.key] || 'other';
+        if (!itemsByCategory[category]) itemsByCategory[category] = [];
+        itemsByCategory[category].push(item);
+    });
+
+    const ITEM_LABELS: Record<string, string> = {
+        ac: 'تكييف', power_windows: 'زجاج كهرباء', central_lock: 'سنتر لوك',
+        dashboard_lights: 'أنوار التابلون', all_lights: 'أنوار السيارة بالكامل',
+        wipers: 'مساحات', dashboard_indicators: 'مؤشرات التابلون',
+        engine_condition: 'حالة الماتور', car_fans: 'مراوح السيارة',
+        battery: 'مواصفات البطارية', glass_cracks: 'شروخ الزجاج',
+        mirrors: 'مرايات', scratches_dents: 'حكات وخبطات بالسيارة',
+        tires: 'إطارات/كوتشات', dashboard_cover: 'لمبة التابلون',
+        srs: 'SRS (نظام الأمان)', abs: 'ABS',
+    };
+
+    // Count checked items
+    const checkedItems = items.filter(i => i.status !== 'not_checked');
+    const workingItems = items.filter(i => i.status === 'works');
+    const notWorkingItems = items.filter(i => i.status === 'not_working');
+
+    return (
+        <div className="space-y-4">
+            {/* Summary Stats */}
+            <div className="grid grid-cols-3 gap-3">
+                <div className="text-center p-3 bg-muted/50 rounded-lg">
+                    <p className="text-2xl font-bold">{checkedItems.length}/{items.length}</p>
+                    <p className="text-xs text-muted-foreground">تم فحصه</p>
+                </div>
+                <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <p className="text-2xl font-bold text-green-600">{workingItems.length}</p>
+                    <p className="text-xs text-muted-foreground">يعمل</p>
+                </div>
+                <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                    <p className="text-2xl font-bold text-red-600">{notWorkingItems.length}</p>
+                    <p className="text-xs text-muted-foreground">لا يعمل</p>
+                </div>
+            </div>
+
+            {/* Items by Category */}
+            {Object.entries(itemsByCategory).map(([category, categoryItems]) => (
+                <div key={category} className="border rounded-lg overflow-hidden">
+                    <div className="bg-muted/50 px-4 py-2 font-semibold text-sm">
+                        {CATEGORY_LABELS_AR[category] || category}
+                    </div>
+                    <div className="divide-y">
+                        {categoryItems.map(item => {
+                            const statusConfig = STATUS_ICONS[item.status] || STATUS_ICONS.not_checked;
+                            return (
+                                <div key={item.key} className="p-3 flex items-start gap-3">
+                                    <div className={cn("mt-0.5", statusConfig.color)}>
+                                        {statusConfig.icon}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-medium text-sm">
+                                                {ITEM_LABELS[item.key] || item.key}
+                                            </span>
+                                            <Badge
+                                                variant="outline"
+                                                className={cn(
+                                                    "text-xs",
+                                                    item.status === 'works' && "border-green-500 text-green-600",
+                                                    item.status === 'not_working' && "border-red-500 text-red-600"
+                                                )}
+                                            >
+                                                {STATUS_LABELS_AR[item.status]}
+                                            </Badge>
+                                        </div>
+                                        {item.notes && (
+                                            <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>
+                                        )}
+                                        {item.photos && item.photos.length > 0 && (
+                                            <div className="flex gap-2 mt-2">
+                                                {item.photos.map((photo, idx) => (
+                                                    <a key={idx} href={photo} target="_blank" rel="noopener noreferrer">
+                                                        <img
+                                                            src={photo}
+                                                            alt=""
+                                                            className="w-12 h-12 rounded-lg object-cover border hover:opacity-75 transition-opacity"
+                                                        />
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            ))}
+
+            {/* Additional Notes */}
+            {additionalNotes && (
+                <div className="p-4 bg-muted/30 rounded-lg">
+                    <p className="text-sm font-medium text-muted-foreground mb-1">ملاحظات إضافية</p>
+                    <p className="text-foreground">{additionalNotes}</p>
+                </div>
+            )}
+
+            {/* Additional Work Request */}
+            {additionalWorkRequest && (
+                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-1">طلب عمل صيانة إضافية</p>
+                    <p className="text-foreground">{additionalWorkRequest}</p>
+                </div>
+            )}
+
+            {/* General Photos */}
+            {inspectionPhotos.length > 0 && (
+                <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">صور عامة للمركبة</p>
+                    <div className="flex flex-wrap gap-2">
+                        {inspectionPhotos.map((photo, idx) => (
+                            <a key={idx} href={photo} target="_blank" rel="noopener noreferrer">
+                                <img
+                                    src={photo}
+                                    alt=""
+                                    className="w-20 h-20 rounded-lg object-cover border hover:opacity-75 transition-opacity"
+                                />
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function AssessmentDetailsPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -328,6 +508,21 @@ export function AssessmentDetailsPage() {
                             )}
                         </CardContent>
                     </Card>
+
+                    {/* Inspection Notes */}
+                    {assessment.inspection_notes && Object.keys(assessment.inspection_notes).length > 0 && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <CheckCircle2 size={20} className="text-green-500" />
+                                    تقرير فحص المركبة
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <InspectionNotesDisplay data={assessment.inspection_notes} />
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
 
                 {/* Actions Sidebar */}

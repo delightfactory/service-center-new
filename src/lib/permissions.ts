@@ -70,8 +70,8 @@ export const PERMISSIONS: Record<PermissionResource, Partial<Record<PermissionAc
     // الاستقبال
     reception: {
         read: ['admin', 'manager', 'supervisor', 'engineer'],
-        create: ['admin', 'manager', 'engineer'],
-        update: ['admin', 'manager', 'engineer'],
+        create: ['admin', 'manager', 'supervisor', 'engineer'],
+        update: ['admin', 'manager', 'supervisor', 'engineer'],
         delete: ['admin', 'manager'],
     },
 
@@ -227,7 +227,7 @@ export const PERMISSIONS: Record<PermissionResource, Partial<Record<PermissionAc
     // التقييمات
     assessments: {
         read: ['admin', 'manager', 'supervisor', 'engineer'],
-        create: ['admin', 'manager', 'engineer'],
+        create: ['admin', 'manager', 'supervisor', 'engineer'],
         update: ['admin', 'manager', 'supervisor', 'engineer'],
         delete: ['admin', 'manager'],
         approve: ['admin', 'manager', 'supervisor'],

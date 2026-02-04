@@ -70,7 +70,7 @@ const router = createBrowserRouter([
                     {
                         path: 'new',
                         element: (
-                            <RoleGuard allowedRoles={['admin', 'manager', 'engineer']}>
+                            <RoleGuard allowedRoles={['admin', 'manager', 'supervisor', 'engineer']}>
                                 <ReceptionWizardPage />
                             </RoleGuard>
                         ),
@@ -89,7 +89,7 @@ const router = createBrowserRouter([
             {
                 path: 'quick-check',
                 element: (
-                    <RoleGuard allowedRoles={['admin', 'manager', 'engineer']}>
+                    <RoleGuard allowedRoles={['admin', 'manager', 'supervisor', 'engineer']}>
                         <QuickCheckPage />
                     </RoleGuard>
                 ),
@@ -98,7 +98,7 @@ const router = createBrowserRouter([
             {
                 path: 'bench-work',
                 element: (
-                    <RoleGuard allowedRoles={['admin', 'manager', 'engineer']}>
+                    <RoleGuard allowedRoles={['admin', 'manager', 'supervisor', 'engineer']}>
                         <BenchWorkPage />
                     </RoleGuard>
                 ),

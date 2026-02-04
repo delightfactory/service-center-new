@@ -23,4 +23,5 @@ export { EntryTypeSelector } from './EntryTypeSelector';
 // Wizard Steps
 export { CustomerVehicleStep } from './CustomerVehicleStep';
 export { VehicleDetailsStep } from './VehicleDetailsStep';
+export { VehicleInspectionStep } from './VehicleInspectionStep';
 
