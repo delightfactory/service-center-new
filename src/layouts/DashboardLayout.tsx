@@ -124,6 +124,11 @@ const navigation: NavItem[] = [
         href: '/dashboard/settings',
         icon: Settings,
         roles: ['admin', 'manager'],
+        children: [
+            { title: 'المستخدمين', href: '/dashboard/settings' },
+            { title: 'الفروع', href: '/dashboard/settings/branches' },
+            { title: 'النسخ الاحتياطي', href: '/dashboard/settings/backup' },
+        ],
     },
 ];
 
@@ -202,7 +207,7 @@ export function DashboardLayout() {
             {/* Sidebar */}
             <aside
                 className={cn(
-                    'fixed right-0 top-0 z-50 h-full bg-card border-l border-border transition-all duration-300',
+                    'fixed right-0 top-0 z-50 h-full bg-card border-l border-border transition-all duration-300 flex flex-col',
                     sidebarOpen ? 'w-64' : 'w-20',
                     mobileSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
                 )}

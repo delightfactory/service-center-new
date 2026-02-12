@@ -10,7 +10,7 @@ import { ReceptionWizardPage, ReceptionListPage, AssessmentDetailsPage, QuickChe
 import { WorkshopPage, KanbanPage, JobOrderDetailsPage, SupervisorReviewPage } from '@/pages/dashboard/workshop';
 import { ProductsPage, ProductDetailsPage, CategoriesPage, InventoryPage, WarehouseTransfersPage, WarehousesPage, StockMovementsPage, StockAuditPage } from '@/pages/dashboard/inventory';
 import { InvoicesPage, TreasuriesPage, ExpensesPage, ExpenseCategoriesPage, CreateInvoicePage, PurchasesPage, PaymentsPage, InvoiceDetailsPage } from '@/pages/dashboard/finance';
-import { UsersPage, BranchesPage, ProfilePage } from '@/pages/dashboard/settings';
+import { UsersPage, BranchesPage, ProfilePage, BackupPage } from '@/pages/dashboard/settings';
 import { SuppliersPage, SupplierDetailsPage } from '@/pages/dashboard/suppliers';
 import { TechLayout, TechJobsPage, TechJobDetailsPage, TechProfilePage } from '@/pages/technician';
 import { RoleGuard, TechnicianGuard } from '@/components/auth';
@@ -411,6 +411,14 @@ const router = createBrowserRouter([
                         path: 'profile',
                         // Profile متاح للجميع
                         element: <ProfilePage />,
+                    },
+                    {
+                        path: 'backup',
+                        element: (
+                            <RoleGuard allowedRoles={['admin']}>
+                                <BackupPage />
+                            </RoleGuard>
+                        ),
                     },
                 ],
             },

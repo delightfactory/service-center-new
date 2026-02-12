@@ -142,3 +142,5 @@ BEGIN
     RAISE NOTICE '🏢 الفرع النشط: %', v_branch_name;
     RAISE NOTICE '════════════════════════════════════════════════════════';
 END $$;
+
+TRUNCATE TABLE public.activity_logs;
