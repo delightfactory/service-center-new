@@ -1,23 +1,15 @@
 // ============================================================
 // Tab Visibility Handler
-// Reloads page when returning from hidden tab to fix stuck queries
 // ============================================================
-
-const MIN_HIDE_DURATION = 3000; // 3 seconds
-let lastHideTime = 0;
-
-if (typeof window !== 'undefined') {
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') {
-            lastHideTime = Date.now();
-        } else if (document.visibilityState === 'visible') {
-            const hideDuration = Date.now() - lastHideTime;
-            if (hideDuration >= MIN_HIDE_DURATION) {
-                // Reload the page to fix stuck Supabase queries
-                window.location.reload();
-            }
-        }
-    });
-}
+//
+// Previously contained a workaround that forced page reload
+// when returning to the app tab after inactivity.
+//
+// ROOT CAUSE FIXED: The infinite loading was caused by a
+// getSession() deadlock in onAuthStateChange callback.
+// See AuthContext.tsx for the fix (setTimeout wrapper).
+//
+// This handler is no longer needed.
+// ============================================================
 
 export { };

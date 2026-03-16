@@ -14,21 +14,24 @@ export const queryClient = new QueryClient({
             // الاحتفاظ بالبيانات في الكاش لمدة 30 دقيقة
             gcTime: 30 * 60 * 1000,
 
-            // إعادة المحاولة 3 مرات مع تأخير تصاعدي
-            retry: 3,
-            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+            // إعادة المحاولة مرة واحدة فقط مع تأخير قصير
+            // استخدام 3 محاولات يسبب تعليق التحميل عند انتهاء صلاحية التوكن
+            retry: 1,
+            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 
             // نعيد الطلب عند التركيز لضمان تحديث البيانات بعد التنقل
-            refetchOnWindowFocus: 'always',
+            // استخدام true بدل 'always' ليحترم staleTime ويتجنب طلبات بتوكن منتهي
+            refetchOnWindowFocus: true,
 
             // لا نعيد الطلب عند إعادة الاتصال إذا كانت البيانات حديثة
-            refetchOnReconnect: 'always',
+            refetchOnReconnect: true,
 
             // نعيد الطلب عند mount دائماً لتفادي بقاء بيانات فارغة بسبب كاش سابق
-            refetchOnMount: 'always',
+            refetchOnMount: true,
 
-            // الشبكة: نستخدم الوضع العادي للتأكد من جلب البيانات
-            networkMode: 'online',
+            // الشبكة: نستخدم 'always' بدل 'online' — navigator.onLine غير موثوق
+            // ويسبب تعليق الطلبات في pending/idle عند التنقل بين التابات
+            networkMode: 'always',
         },
         mutations: {
             // إعادة المحاولة للـ mutations
@@ -36,7 +39,7 @@ export const queryClient = new QueryClient({
             retryDelay: 1000,
 
             // Network mode
-            networkMode: 'online',
+            networkMode: 'always',
         },
     },
 });

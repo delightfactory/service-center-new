@@ -94,11 +94,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         };
 
+        // Safety timeout — if auth initialization hangs for any reason,
+        // force loading to false after 10 seconds to prevent infinite spinner.
+        // This is a failsafe for network issues, Supabase outages, etc.
+        const safetyTimeout = setTimeout(() => {
+            setLoading((current) => {
+                if (current) {
+                    debugWarn('[Auth] Safety timeout reached — forcing loading=false');
+                    isInitializing = false;
+                    return false;
+                }
+                return current;
+            });
+        }, 10000);
+
         initAuth();
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event, newSession) => {
+            (event, newSession) => {
                 debugLog('[Auth] State change:', event);
 
                 // Skip INITIAL_SESSION event as we handle it in initAuth
@@ -116,8 +130,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser(newSession?.user ?? null);
 
                 if (newSession?.user) {
-                    const profileData = await fetchProfile(newSession.user.id);
-                    setProfile(profileData);
+                    // CRITICAL: Defer profile fetch to next event loop tick.
+                    // Calling a Supabase query inside onAuthStateChange causes a deadlock:
+                    // onAuthStateChange → fetchProfile → supabase.from() → getSession() → 
+                    // waits for onAuthStateChange to complete → DEADLOCK
+                    const userId = newSession.user.id;
+                    setTimeout(async () => {
+                        const profileData = await fetchProfile(userId);
+                        setProfile(profileData);
+                    }, 0);
                 } else {
                     setProfile(null);
                 }
@@ -125,6 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
 
         return () => {
+            clearTimeout(safetyTimeout);
             subscription.unsubscribe();
         };
     }, [fetchProfile]);

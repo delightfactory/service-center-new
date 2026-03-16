@@ -52,9 +52,14 @@ export function useMaintenanceMode() {
             console.log('[Maintenance] Current mode:', value);
             return value;
         },
-        staleTime: 1000 * 5, // 5 seconds for faster updates
+        // لا نعيد المحاولة - إذا فشل الطلب نستخدم القيمة الافتراضية (false)
+        // إعادة المحاولة مع توكن منتهي تسبب تعليق التطبيق
+        retry: false,
+        staleTime: 1000 * 30, // 30 seconds — no need to check every 5s
         gcTime: 1000 * 60 * 5, // 5 minutes
         refetchOnWindowFocus: true,
+        // Provide immediate default so loading is never blocking
+        placeholderData: DEFAULT_MAINTENANCE_MODE,
     });
 
     const toggleMaintenanceMode = async (enabled: boolean) => {
