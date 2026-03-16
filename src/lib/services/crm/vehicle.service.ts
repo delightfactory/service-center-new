@@ -95,24 +95,73 @@ class VehicleService extends BaseService<Vehicle, CreateVehicleDTO, UpdateVehicl
     }
 
     /**
-     * Search vehicles by plate number or VIN
+     * Search vehicles by plate number, VIN, make, model, color, engine type, year, or customer name
      */
-    async searchVehicles(query: string, limit: number = 20): Promise<VehicleWithCustomer[]> {
+    async searchVehicles(query: string, limit: number = 50): Promise<VehicleWithCustomer[]> {
         if (!query.trim()) return [];
 
-        const { data, error } = await supabase
+        const searchTerm = query.trim();
+        const selectQuery = `
+            id, plate_number, vin, make, model, year, color, engine_type,
+            customer_id, is_active, created_at, updated_at,
+            customer:customers (id, name, phone)
+        `;
+
+        // Query 1: search vehicle fields
+        const vehicleFieldsFilter = [
+            `plate_number.ilike.%${searchTerm}%`,
+            `vin.ilike.%${searchTerm}%`,
+            `make.ilike.%${searchTerm}%`,
+            `model.ilike.%${searchTerm}%`,
+            `color.ilike.%${searchTerm}%`,
+            `engine_type.ilike.%${searchTerm}%`,
+        ].join(',');
+
+        const vehicleQuery = supabase
             .from(this.tableName)
-            .select(`
-        id, plate_number, vin, make, model, year, color,
-        customer:customers (id, name, phone)
-      `)
-            .or(`plate_number.ilike.%${query}%,vin.ilike.%${query}%`)
+            .select(selectQuery)
+            .or(vehicleFieldsFilter)
             .eq('is_active', true)
             .limit(limit)
-            .order('plate_number');
+            .order('created_at', { ascending: false });
 
-        if (error) handleSupabaseError(error);
-        return data as unknown as VehicleWithCustomer[];
+        // Query 2: search by customer name (requires separate query since cross-table or is not supported)
+        const customerQuery = supabase
+            .from(this.tableName)
+            .select(selectQuery)
+            .eq('is_active', true)
+            .ilike('customer.name' as any, `%${searchTerm}%`)
+            .limit(limit)
+            .order('created_at', { ascending: false });
+
+        // Run both queries in parallel
+        const [vehicleResult, customerResult] = await Promise.all([vehicleQuery, customerQuery]);
+
+        if (vehicleResult.error) handleSupabaseError(vehicleResult.error);
+
+        // Merge & deduplicate results
+        const vehicleData = (vehicleResult.data || []) as unknown as VehicleWithCustomer[];
+        // Customer inner-join filter: Supabase returns rows with empty customer array if no match
+        const customerData = customerResult.error
+            ? []
+            : ((customerResult.data || []) as unknown as VehicleWithCustomer[])
+                .filter(v => v.customer && (!Array.isArray(v.customer) || (v.customer as any).length > 0));
+
+        // Deduplicate by id
+        const seen = new Set<string>();
+        const merged: VehicleWithCustomer[] = [];
+        for (const v of [...vehicleData, ...customerData]) {
+            if (!seen.has(v.id)) {
+                seen.add(v.id);
+                // Normalize customer from array to object (Supabase join quirk)
+                if (Array.isArray(v.customer)) {
+                    (v as any).customer = (v.customer as any)[0] || null;
+                }
+                merged.push(v);
+            }
+        }
+
+        return merged;
     }
 
     /**

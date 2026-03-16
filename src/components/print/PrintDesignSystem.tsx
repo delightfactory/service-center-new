@@ -429,10 +429,32 @@ export const PrintContainer = React.forwardRef<HTMLDivElement, PrintContainerPro
                 <div
                     ref={ref}
                     className="bg-white text-black p-4 max-w-[210mm] mx-auto print:p-4 print:max-w-none text-sm"
-                    style={{ fontFamily: 'Cairo, Arial, sans-serif', fontSize: '12px' }}
+                    style={{ fontFamily: 'Cairo, Arial, sans-serif', fontSize: '12px', position: 'relative', overflow: 'hidden' }}
                     dir="rtl"
                 >
-                    {children}
+                    {/* Watermark - علامة مائية */}
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '340px',
+                            height: '340px',
+                            opacity: 0.04,
+                            pointerEvents: 'none',
+                            zIndex: 0,
+                            backgroundImage: `url(${PRINT_CONFIG.logoUrl})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                        }}
+                        aria-hidden="true"
+                    />
+                    {/* Content */}
+                    <div style={{ position: 'relative', zIndex: 1 }}>
+                        {children}
+                    </div>
                 </div>
             </>
         );

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Package, Warehouse, Search, AlertTriangle, TrendingUp, TrendingDown, Filter } from 'lucide-react';
+import { Package, Warehouse, Search, AlertTriangle, TrendingUp, TrendingDown, Filter, Download, Printer, FileSpreadsheet } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
+import * as XLSX from 'xlsx';
+import html2pdf from 'html2pdf.js';
 import {
     Card,
     CardContent,
@@ -29,6 +31,11 @@ import {
 } from '@/components/ui/select';
 import { cn, formatCurrency } from '@/lib/utils';
 import { PageHeader, EmptyState } from '@/components/shared';
+import {
+    InventoryReportPrintTemplate,
+    type InventoryReportData,
+    type InventoryReportItem,
+} from '@/components/print';
 
 // ============================================================
 // Inventory Page - صفحة الأرصدة
@@ -71,6 +78,8 @@ export function InventoryPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [warehouseFilter, setWarehouseFilter] = useState<string>('all');
     const [stockFilter, setStockFilter] = useState<string>('all');
+    const [isExporting, setIsExporting] = useState(false);
+    const printRef = useRef<HTMLDivElement>(null);
 
     // Fetch warehouses for filter
     const { data: warehouses } = useQuery({
@@ -151,12 +160,126 @@ export function InventoryPage() {
         };
     }, [inventoryItems]);
 
+    // Build report data for PDF export
+    const reportData: InventoryReportData | null = useMemo(() => {
+        if (!inventoryItems || inventoryItems.length === 0) return null;
+        const warehouseName = warehouseFilter === 'all'
+            ? 'كل المخازن'
+            : warehouses?.find(w => w.id === warehouseFilter)?.name || warehouseFilter;
+
+        const items: InventoryReportItem[] = inventoryItems.map(item => {
+            const isLow = item.quantity <= (item.product?.min_stock || 0) && item.quantity > 0;
+            const isOut = item.quantity <= 0;
+            return {
+                productCode: item.product?.code || '',
+                productName: item.product?.name || '',
+                productType: item.product?.product_type || '',
+                unit: item.product?.unit || '',
+                warehouseName: item.warehouse?.name || '',
+                quantity: item.quantity,
+                reservedQuantity: item.reserved_quantity,
+                availableQuantity: item.available_quantity,
+                avgCost: item.avg_cost,
+                minStock: item.product?.min_stock || 0,
+                totalValue: item.quantity * item.avg_cost,
+                status: isOut ? 'out' : isLow ? 'low' : 'available',
+            };
+        });
+
+        return {
+            items,
+            filters: { warehouse: warehouseName, stockFilter, search: searchQuery },
+            stats,
+        };
+    }, [inventoryItems, warehouseFilter, warehouses, stockFilter, searchQuery, stats]);
+
+    // Excel export
+    const handleExportExcel = useCallback(() => {
+        if (!inventoryItems || inventoryItems.length === 0) return;
+
+        const rows = inventoryItems.map((item, i) => ({
+            '#': i + 1,
+            'الكود': item.product?.code || '',
+            'المنتج': item.product?.name || '',
+            'النوع': productTypeLabels[item.product?.product_type] || item.product?.product_type || '',
+            'المخزن': item.warehouse?.name || '',
+            'الوحدة': item.product?.unit || '',
+            'الكمية': item.quantity,
+            'محجوز': item.reserved_quantity,
+            'متاح': item.available_quantity,
+            'متوسط التكلفة': item.avg_cost,
+            'إجمالي القيمة': item.quantity * item.avg_cost,
+            'الحد الأدنى': item.product?.min_stock || 0,
+            'الحالة': item.quantity <= 0 ? 'نفد' : item.quantity <= (item.product?.min_stock || 0) ? 'نقص' : 'متوفر',
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!cols'] = [
+            { wch: 5 }, { wch: 12 }, { wch: 30 }, { wch: 12 }, { wch: 15 },
+            { wch: 8 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 14 },
+            { wch: 14 }, { wch: 10 }, { wch: 10 },
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'أرصدة المخزون');
+        const today = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `أرصدة المخزون - ${today}.xlsx`);
+    }, [inventoryItems]);
+
+    // PDF export
+    const handleExportPdf = useCallback(async () => {
+        if (!printRef.current) return;
+        setIsExporting(true);
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const opt = {
+                margin: [10, 8, 10, 8] as [number, number, number, number],
+                filename: `أرصدة المخزون - ${today}.pdf`,
+                image: { type: 'jpeg' as const, quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' as const },
+                pagebreak: { mode: ['avoid-all' as const, 'css' as const] },
+            };
+            await html2pdf().set(opt).from(printRef.current).save();
+        } catch (err) {
+            console.error('PDF export failed:', err);
+        } finally {
+            setIsExporting(false);
+        }
+    }, []);
+
+    const hasData = inventoryItems && inventoryItems.length > 0;
+
     return (
         <div className="space-y-6">
             {/* Header */}
             <PageHeader
                 title="أرصدة المخزون"
                 description="متابعة الأرصدة في كل المخازن"
+                actions={
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleExportExcel}
+                            disabled={!hasData}
+                            className="gap-2"
+                        >
+                            <FileSpreadsheet size={16} />
+                            Excel
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleExportPdf}
+                            disabled={!hasData || isExporting}
+                            className="gap-2"
+                        >
+                            <Download size={16} />
+                            {isExporting ? 'جاري...' : 'PDF'}
+                        </Button>
+                    </div>
+                }
             />
 
             {/* Stats Cards */}
@@ -356,6 +479,12 @@ export function InventoryPage() {
                     )}
                 </CardContent>
             </Card>
+            {/* Hidden Print Template for PDF */}
+            <div style={{ display: 'none' }}>
+                {reportData && (
+                    <InventoryReportPrintTemplate ref={printRef} data={reportData} />
+                )}
+            </div>
         </div>
     );
 }

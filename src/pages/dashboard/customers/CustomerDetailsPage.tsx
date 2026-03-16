@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CustomerAccountStatementDialog } from '@/components/customers/CustomerAccountStatementDialog';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client';
@@ -17,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
     User, Phone, Mail, MapPin, Edit, Car, FileText, Receipt,
     ArrowRight, Wallet, Building, Plus, History, Wrench,
-    Calendar, CheckCircle, Clock, AlertCircle
+    Calendar, CheckCircle, Clock, AlertCircle, ScrollText
 } from 'lucide-react';
 import {
     Dialog,
@@ -134,6 +135,7 @@ export function CustomerDetailsPage() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [showEditDialog, setShowEditDialog] = useState(false);
+    const [showStatementDialog, setShowStatementDialog] = useState(false);
     const [activeTab, setActiveTab] = useState('info');
 
     // Edit form state
@@ -312,6 +314,10 @@ export function CustomerDetailsPage() {
                 backLink="/dashboard/customers"
                 actions={
                     <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setShowStatementDialog(true)}>
+                            <ScrollText size={16} className="ml-2" />
+                            كشف حساب
+                        </Button>
                         <IfCanUpdate resource="customers">
                             <Button variant="outline" onClick={openEditDialog}>
                                 <Edit size={16} className="ml-2" />
@@ -712,6 +718,13 @@ export function CustomerDetailsPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Account Statement Dialog */}
+            <CustomerAccountStatementDialog
+                open={showStatementDialog}
+                onOpenChange={setShowStatementDialog}
+                customer={customer}
+            />
         </div>
     );
 }

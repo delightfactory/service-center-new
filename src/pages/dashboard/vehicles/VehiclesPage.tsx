@@ -73,7 +73,7 @@ export function VehiclesPage() {
             <Card>
                 <CardContent className="p-4">
                     <Input
-                        placeholder="بحث برقم اللوحة أو رقم الشاسيه..."
+                        placeholder="بحث برقم اللوحة، الماركة، الموديل، الشاسيه، اللون، أو اسم العميل..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         icon={<Search size={18} />}
