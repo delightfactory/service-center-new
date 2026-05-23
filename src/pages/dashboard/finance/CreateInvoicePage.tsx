@@ -75,6 +75,14 @@ import {
 import { cn, formatCurrency } from '@/lib/utils';
 
 import { PageHeader } from '@/components/shared';
+import {
+    CustomerSearchSelect,
+    SupplierSearchSelect,
+    ProductSearchSelect,
+    type InvoiceCustomerOption,
+    type InvoiceSupplierOption,
+    type InvoiceProductOption,
+} from '@/components/finance';
 
 
 
@@ -122,44 +130,6 @@ interface JobItem {
 
 
 
-interface ProductOption {
-
-    id: string;
-
-    code: string | null;
-
-    name: string;
-
-    selling_price: number;
-
-    purchase_price: number;
-
-}
-
-
-
-interface CustomerOption {
-
-    id: string;
-
-    name: string;
-
-    phone: string | null;
-
-}
-
-
-
-interface SupplierOption {
-
-    id: string;
-
-    name: string;
-
-}
-
-
-
 interface InvoiceItem {
 
     id: string;
@@ -177,6 +147,10 @@ interface InvoiceItem {
     discount: number;
 
     total: number;
+
+    product_name?: string | null;
+
+    product_code?: string | null;
 
 }
 
@@ -204,9 +178,13 @@ export function CreateInvoicePage() {
 
     const [supplierId, setSupplierId] = useState('');
 
+    const [selectedCustomer, setSelectedCustomer] = useState<InvoiceCustomerOption | null>(null);
+
+    const [selectedSupplier, setSelectedSupplier] = useState<InvoiceSupplierOption | null>(null);
+
     const [items, setItems] = useState<InvoiceItem[]>([]);
 
-    const [taxRate, setTaxRate] = useState('15');
+    const [taxRate, setTaxRate] = useState('0');
 
     const [discountAmount, setDiscountAmount] = useState('0');
 
@@ -227,12 +205,14 @@ export function CreateInvoicePage() {
         if (isPurchaseInvoice) {
 
             setCustomerId('');
+            setSelectedCustomer(null);
 
         }
 
         if (isSalesInvoice) {
 
             setSupplierId('');
+            setSelectedSupplier(null);
 
         }
 
@@ -281,6 +261,12 @@ export function CreateInvoicePage() {
                 const customer = Array.isArray(data.customer) ? data.customer[0] : data.customer;
 
                 setCustomerId(customer?.id || '');
+                setSelectedCustomer(customer ? {
+                    id: customer.id,
+                    name: customer.name,
+                    phone: customer.phone || null,
+                    code: null,
+                } : null);
 
             }
 
@@ -299,7 +285,6 @@ export function CreateInvoicePage() {
         },
 
         enabled: !!jobOrderId,
-
     });
 
 
@@ -337,7 +322,6 @@ export function CreateInvoicePage() {
         },
 
         enabled: !!jobOrderId,
-
     });
 
 
@@ -410,6 +394,10 @@ export function CreateInvoicePage() {
 
                     total: item.total_price || 0,
 
+                    product_name: product?.name || null,
+
+                    product_code: product?.code || null,
+
                 };
 
             });
@@ -431,7 +419,6 @@ export function CreateInvoicePage() {
         },
 
         enabled: !!jobOrderId,
-
     });
 
 
@@ -458,51 +445,57 @@ export function CreateInvoicePage() {
 
             total: 0,
 
+            product_name: undefined,
+
+            product_code: null,
+
         }]);
 
     };
 
 
 
-    const handleProductChange = (itemId: string, productId: string) => {
-
-        const selectedProduct = products?.find(p => p.id === productId);
-
-
+    const handleProductSelect = (itemId: string, selectedProduct: InvoiceProductOption | null) => {
 
         setItems(items.map(item => {
 
             if (item.id !== itemId) return item;
 
+            if (!selectedProduct) {
 
-
-            const next = { ...item, product_id: productId || null };
-
-
-
-            if (selectedProduct) {
-
-                const defaultPrice = isPurchaseInvoice ? selectedProduct.purchase_price : selectedProduct.selling_price;
-
-                if (!next.description.trim()) {
-
-                    next.description = selectedProduct.name;
-
-                }
-
-                if (!next.unit_price || next.unit_price === 0) {
-
-                    next.unit_price = defaultPrice || 0;
-
-                }
-
-                const subtotal = next.quantity * next.unit_price;
-
-                next.total = subtotal - next.discount;
+                return {
+                    ...item,
+                    product_id: null,
+                    product_name: null,
+                    product_code: null,
+                };
 
             }
 
+            const defaultPrice = isPurchaseInvoice ? selectedProduct.purchase_price : selectedProduct.selling_price;
 
+            const next = {
+                ...item,
+                product_id: selectedProduct.id,
+                product_name: selectedProduct.name,
+                product_code: selectedProduct.code,
+            };
+
+            if (!next.description.trim()) {
+
+                next.description = selectedProduct.name;
+
+            }
+
+            if (!next.unit_price || next.unit_price === 0) {
+
+                next.unit_price = defaultPrice || 0;
+
+            }
+
+            const subtotal = next.quantity * next.unit_price;
+
+            next.total = subtotal - next.discount;
 
             return next;
 
@@ -575,102 +568,6 @@ export function CreateInvoicePage() {
         return { subtotal, discount, tax, total };
 
     }, [items, discountAmount, taxRate]);
-
-
-
-    // Fetch products for manual items
-
-    const { data: products } = useQuery({
-
-        queryKey: ['invoice-products', invoiceType],
-
-        queryFn: async () => {
-
-            const { data, error } = await supabase
-
-                .from('products')
-
-                .select('id, code, name, selling_price, purchase_price')
-
-                .eq('is_active', true)
-
-                .order('name');
-
-            if (error) throw error;
-
-            return data as ProductOption[];
-
-        },
-
-    });
-
-
-
-    // Fetch customers (for sales invoices without job order)
-
-    const { data: customers } = useQuery({
-
-        queryKey: ['invoice-customers', profile?.branch_id],
-
-        queryFn: async () => {
-
-            let query = supabase
-
-                .from('customers')
-
-                .select('id, name, phone')
-
-                .eq('is_active', true)
-
-                .order('name');
-
-
-
-            if (profile?.branch_id) {
-
-                query = query.eq('branch_id', profile.branch_id);
-
-            }
-
-
-
-            const { data, error } = await query;
-
-            if (error) throw error;
-
-            return data as CustomerOption[];
-
-        },
-
-    });
-
-
-
-    // Fetch suppliers (for purchase invoices)
-
-    const { data: suppliers } = useQuery({
-
-        queryKey: ['invoice-suppliers'],
-
-        queryFn: async () => {
-
-            const { data, error } = await supabase
-
-                .from('suppliers')
-
-                .select('id, name')
-
-                .eq('is_active', true)
-
-                .order('name');
-
-            if (error) throw error;
-
-            return data as SupplierOption[];
-
-        },
-
-    });
 
 
 
@@ -992,35 +889,15 @@ export function CreateInvoicePage() {
 
                                     <Label>العميل</Label>
 
-                                    <Select
-
+                                    <CustomerSearchSelect
                                         value={customerId}
-
-                                        onValueChange={setCustomerId}
-
-                                    >
-
-                                        <SelectTrigger>
-
-                                            <SelectValue placeholder="اختر العميل" />
-
-                                        </SelectTrigger>
-
-                                        <SelectContent>
-
-                                            {(customers || []).map((customer) => (
-
-                                                <SelectItem key={customer.id} value={customer.id}>
-
-                                                    {customer.phone ? `${customer.name} - ${customer.phone}` : customer.name}
-
-                                                </SelectItem>
-
-                                            ))}
-
-                                        </SelectContent>
-
-                                    </Select>
+                                        selected={selectedCustomer}
+                                        branchId={profile?.branch_id || null}
+                                        onSelect={(customer) => {
+                                            setSelectedCustomer(customer);
+                                            setCustomerId(customer?.id || '');
+                                        }}
+                                    />
 
                                 </div>
 
@@ -1034,35 +911,14 @@ export function CreateInvoicePage() {
 
                                     <Label>المورد</Label>
 
-                                    <Select
-
+                                    <SupplierSearchSelect
                                         value={supplierId}
-
-                                        onValueChange={setSupplierId}
-
-                                    >
-
-                                        <SelectTrigger>
-
-                                            <SelectValue placeholder="اختر المورد" />
-
-                                        </SelectTrigger>
-
-                                        <SelectContent>
-
-                                            {(suppliers || []).map((supplier) => (
-
-                                                <SelectItem key={supplier.id} value={supplier.id}>
-
-                                                    {supplier.name}
-
-                                                </SelectItem>
-
-                                            ))}
-
-                                        </SelectContent>
-
-                                    </Select>
+                                        selected={selectedSupplier}
+                                        onSelect={(supplier) => {
+                                            setSelectedSupplier(supplier);
+                                            setSupplierId(supplier?.id || '');
+                                        }}
+                                    />
 
                                 </div>
 
@@ -1155,8 +1011,86 @@ export function CreateInvoicePage() {
                             </div>
 
                         ) : (
+                            <>
 
-                            <div className="overflow-x-auto">
+                            <div className="space-y-3 md:hidden">
+                                {items.map((item, index) => (
+                                    <div key={item.id} className="rounded-lg border bg-background p-3 space-y-3">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="text-sm font-semibold">بند #{index + 1}</div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => removeItem(item.id)}
+                                                className="h-8 w-8 shrink-0 text-destructive"
+                                            >
+                                                <Trash2 size={16} />
+                                            </Button>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs text-muted-foreground">المنتج</Label>
+                                            <ProductSearchSelect
+                                                selectedLabel={item.product_id ? (item.product_name || item.description) : undefined}
+                                                selectedCode={item.product_code}
+                                                disabled={!!jobOrderId && !!item.job_item_id}
+                                                onSelect={(product) => handleProductSelect(item.id, product)}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs text-muted-foreground">الوصف</Label>
+                                            <Input
+                                                value={item.description}
+                                                onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                                                placeholder="وصف البند..."
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs text-muted-foreground">الكمية</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="1"
+                                                    value={item.quantity}
+                                                    onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                                                    dir="ltr"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs text-muted-foreground">السعر</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={item.unit_price}
+                                                    onChange={(e) => updateItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
+                                                    dir="ltr"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs text-muted-foreground">الخصم</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={item.discount}
+                                                    onChange={(e) => updateItem(item.id, 'discount', parseFloat(e.target.value) || 0)}
+                                                    dir="ltr"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col justify-end rounded-md bg-muted/50 px-3 py-2">
+                                                <span className="text-xs text-muted-foreground">الإجمالي</span>
+                                                <span className="font-mono font-semibold text-primary">{formatCurrency(item.total)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="hidden overflow-x-auto md:block">
 
                                 <Table>
 
@@ -1190,37 +1124,12 @@ export function CreateInvoicePage() {
 
                                                 <TableCell>
 
-                                                    <Select
-
-                                                        value={item.product_id ?? undefined}
-
-                                                        onValueChange={(value) => handleProductChange(item.id, value)}
-
+                                                    <ProductSearchSelect
+                                                        selectedLabel={item.product_id ? (item.product_name || item.description) : undefined}
+                                                        selectedCode={item.product_code}
                                                         disabled={!!jobOrderId && !!item.job_item_id}
-
-                                                    >
-
-                                                        <SelectTrigger>
-
-                                                            <SelectValue placeholder="اختر المنتج" />
-
-                                                        </SelectTrigger>
-
-                                                        <SelectContent>
-
-                                                            {(products || []).map((product) => (
-
-                                                                <SelectItem key={product.id} value={product.id}>
-
-                                                                    {product.code ? `${product.name} (${product.code})` : product.name}
-
-                                                                </SelectItem>
-
-                                                            ))}
-
-                                                        </SelectContent>
-
-                                                    </Select>
+                                                        onSelect={(product) => handleProductSelect(item.id, product)}
+                                                    />
 
                                                 </TableCell>
 
@@ -1333,6 +1242,7 @@ export function CreateInvoicePage() {
                                 </Table>
 
                             </div>
+                            </>
 
                         )}
 

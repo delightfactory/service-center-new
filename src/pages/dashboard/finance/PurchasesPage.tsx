@@ -51,6 +51,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { PageHeader, EmptyState } from '@/components/shared';
+import {
+    SupplierSearchSelect,
+    ProductSearchSelect,
+    type InvoiceSupplierOption,
+    type InvoiceProductOption,
+} from '@/components/finance';
 import { useRealtime } from '@/hooks';
 import { useAuth } from '@/contexts/AuthContext';
 import { IfCanCreate, IfCanApprove, IfCanDelete } from '@/components/auth';
@@ -58,18 +64,6 @@ import { IfCanCreate, IfCanApprove, IfCanDelete } from '@/components/auth';
 // ============================================================
 // Purchases Page - فواتير المشتريات
 // ============================================================
-
-interface Supplier {
-    id: string;
-    name: string;
-    code: string;
-}
-
-interface Product {
-    id: string;
-    code: string;
-    name: string;
-}
 
 interface PurchaseItem {
     product_id: string;
@@ -112,43 +106,15 @@ export function PurchasesPage() {
 
     // Form state
     const [supplierId, setSupplierId] = useState('');
+    const [selectedSupplier, setSelectedSupplier] = useState<InvoiceSupplierOption | null>(null);
     const [items, setItems] = useState<PurchaseItem[]>([]);
     const [discount, setDiscount] = useState('0');
     const [notes, setNotes] = useState('');
 
     // Add item state
-    const [selectedProductId, setSelectedProductId] = useState('');
+    const [selectedProduct, setSelectedProduct] = useState<InvoiceProductOption | null>(null);
     const [itemQuantity, setItemQuantity] = useState('1');
     const [itemPrice, setItemPrice] = useState('');
-
-    // Fetch suppliers
-    const { data: suppliers } = useQuery({
-        queryKey: ['suppliers-list'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('suppliers')
-                .select('id, name, code')
-                .eq('is_active', true)
-                .order('name');
-            if (error) throw error;
-            return data as Supplier[];
-        },
-    });
-
-    // Fetch products (only parts and consumables, not services)
-    const { data: products } = useQuery({
-        queryKey: ['products-for-purchase'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('products')
-                .select('id, code, name, product_type')
-                .eq('is_active', true)
-                .neq('product_type', 'service') // Exclude services from purchase
-                .order('name');
-            if (error) throw error;
-            return data as (Product & { product_type: string })[];
-        },
-    });
 
     // Fetch purchase invoices
     const { data: invoices, isLoading } = useQuery({
@@ -215,13 +181,13 @@ export function PurchasesPage() {
 
     // Add item to list
     const handleAddItem = () => {
-        const product = products?.find(p => p.id === selectedProductId);
+        const product = selectedProduct;
         if (!product) return;
 
         const qty = parseFloat(itemQuantity) || 1;
         const price = parseFloat(itemPrice) || 0;
 
-        const existingIndex = items.findIndex(i => i.product_id === selectedProductId);
+        const existingIndex = items.findIndex(i => i.product_id === product.id);
         if (existingIndex >= 0) {
             // Update existing
             const updated = [...items];
@@ -233,14 +199,14 @@ export function PurchasesPage() {
             setItems([...items, {
                 product_id: product.id,
                 product_name: product.name,
-                product_code: product.code,
+                product_code: product.code || '',
                 quantity: qty,
                 unit_price: price,
                 total: qty * price,
             }]);
         }
 
-        setSelectedProductId('');
+        setSelectedProduct(null);
         setItemQuantity('1');
         setItemPrice('');
     };
@@ -332,10 +298,11 @@ export function PurchasesPage() {
     const handleCloseDialog = () => {
         setShowDialog(false);
         setSupplierId('');
+        setSelectedSupplier(null);
         setItems([]);
         setDiscount('0');
         setNotes('');
-        setSelectedProductId('');
+        setSelectedProduct(null);
         setItemQuantity('1');
         setItemPrice('');
     };
@@ -591,18 +558,14 @@ export function PurchasesPage() {
                         {/* Supplier */}
                         <div className="space-y-2">
                             <Label>المورد *</Label>
-                            <Select value={supplierId} onValueChange={setSupplierId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="اختر المورد" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {suppliers?.map((supplier) => (
-                                        <SelectItem key={supplier.id} value={supplier.id}>
-                                            {supplier.name} ({supplier.code})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <SupplierSearchSelect
+                                value={supplierId}
+                                selected={selectedSupplier}
+                                onSelect={(supplier) => {
+                                    setSelectedSupplier(supplier);
+                                    setSupplierId(supplier?.id || '');
+                                }}
+                            />
                         </div>
 
                         {/* Add Item */}
@@ -611,22 +574,17 @@ export function PurchasesPage() {
                                 <CardTitle className="text-sm">إضافة صنف</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
-                                <div className="grid grid-cols-4 gap-2">
-                                    <div className="col-span-2">
-                                        <Select value={selectedProductId} onValueChange={(v) => {
-                                            setSelectedProductId(v);
-                                        }}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="اختر المنتج" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {products?.map((product) => (
-                                                    <SelectItem key={product.id} value={product.id}>
-                                                        {product.name} ({product.code})
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+                                    <div className="sm:col-span-2">
+                                        <ProductSearchSelect
+                                            selectedLabel={selectedProduct?.name}
+                                            selectedCode={selectedProduct?.code}
+                                            excludeServices
+                                            onSelect={(product) => {
+                                                setSelectedProduct(product);
+                                                setItemPrice(product?.purchase_price?.toString() || '');
+                                            }}
+                                        />
                                     </div>
                                     <Input
                                         type="number"
@@ -635,6 +593,7 @@ export function PurchasesPage() {
                                         value={itemQuantity}
                                         onChange={(e) => setItemQuantity(e.target.value)}
                                         placeholder="الكمية"
+                                        className="min-w-0"
                                     />
                                     <Input
                                         type="number"
@@ -643,6 +602,7 @@ export function PurchasesPage() {
                                         value={itemPrice}
                                         onChange={(e) => setItemPrice(e.target.value)}
                                         placeholder="السعر"
+                                        className="min-w-0"
                                     />
                                 </div>
                                 <Button
@@ -650,7 +610,7 @@ export function PurchasesPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={handleAddItem}
-                                    disabled={!selectedProductId}
+                                    disabled={!selectedProduct}
                                     className="w-full"
                                 >
                                     <Plus size={16} className="ml-1" />
@@ -663,6 +623,46 @@ export function PurchasesPage() {
                         {items.length > 0 && (
                             <Card>
                                 <CardContent className="p-0">
+                                    <div className="space-y-2 p-3 md:hidden">
+                                        {items.map((item, index) => (
+                                            <div key={index} className="rounded-lg border bg-background p-3 space-y-3">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0">
+                                                        <div className="font-medium truncate">{item.product_name}</div>
+                                                        {item.product_code && (
+                                                            <div className="text-xs text-muted-foreground">{item.product_code}</div>
+                                                        )}
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 shrink-0 text-destructive"
+                                                        onClick={() => handleRemoveItem(index)}
+                                                    >
+                                                        <X size={16} />
+                                                    </Button>
+                                                </div>
+
+                                                <div className="grid grid-cols-3 gap-2 text-sm">
+                                                    <div className="rounded-md bg-muted/50 px-2 py-1.5">
+                                                        <div className="text-xs text-muted-foreground">الكمية</div>
+                                                        <div className="font-medium">{item.quantity}</div>
+                                                    </div>
+                                                    <div className="rounded-md bg-muted/50 px-2 py-1.5">
+                                                        <div className="text-xs text-muted-foreground">السعر</div>
+                                                        <div className="font-medium">{formatCurrency(item.unit_price)}</div>
+                                                    </div>
+                                                    <div className="rounded-md bg-primary/10 px-2 py-1.5">
+                                                        <div className="text-xs text-muted-foreground">الإجمالي</div>
+                                                        <div className="font-semibold text-primary">{formatCurrency(item.total)}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="hidden md:block">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
@@ -704,6 +704,7 @@ export function PurchasesPage() {
                                             ))}
                                         </TableBody>
                                     </Table>
+                                    </div>
                                 </CardContent>
                             </Card>
                         )}
