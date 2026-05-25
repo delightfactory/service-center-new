@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client';
 import {
@@ -72,6 +73,180 @@ interface TransferItem {
     product_code: string;
     quantity: number;
     available: number;
+}
+
+interface TransferProductPickerProps {
+    products: InventoryItem[];
+    selectedProductId: string;
+    onSelect: (productId: string) => void;
+    disabled?: boolean;
+}
+
+function TransferProductPicker({
+    products,
+    selectedProductId,
+    onSelect,
+    disabled = false,
+}: TransferProductPickerProps) {
+    const [search, setSearch] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+    const triggerRef = React.useRef<HTMLDivElement | null>(null);
+    const [dropdownStyle, setDropdownStyle] = React.useState<React.CSSProperties>({});
+    const selectedInventory = products.find(item => item.product_id === selectedProductId);
+
+    const filteredProducts = React.useMemo(() => {
+        const value = search.trim().toLowerCase();
+        if (value.length < 2) return [];
+
+        return products
+            .filter(item => {
+                const name = item.product?.name?.toLowerCase() || '';
+                const code = item.product?.code?.toLowerCase() || '';
+                return name.includes(value) || code.includes(value);
+            })
+            .slice(0, 10);
+    }, [products, search]);
+
+    const handleClear = () => {
+        onSelect('');
+        setSearch('');
+        setIsOpen(false);
+    };
+
+    React.useEffect(() => {
+        if (!isOpen || search.trim().length < 2 || disabled) return;
+
+        const updatePosition = () => {
+            const rect = triggerRef.current?.getBoundingClientRect();
+            if (!rect) return;
+
+            const viewportPadding = 8;
+            const availableWidth = Math.max(240, window.innerWidth - viewportPadding * 2);
+            const width = Math.min(Math.max(rect.width, 240), availableWidth);
+            const right = Math.max(viewportPadding, window.innerWidth - rect.right);
+
+            setDropdownStyle({
+                position: 'fixed',
+                top: rect.bottom + 4,
+                right,
+                width,
+                maxHeight: Math.max(180, window.innerHeight - rect.bottom - 16),
+            });
+        };
+
+        updatePosition();
+        window.addEventListener('resize', updatePosition);
+        window.addEventListener('scroll', updatePosition, true);
+
+        return () => {
+            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener('scroll', updatePosition, true);
+        };
+    }, [disabled, isOpen, search]);
+
+    if (selectedInventory?.product) {
+        return (
+            <div className="flex min-h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border bg-background px-2.5 py-1.5 text-sm">
+                <button
+                    type="button"
+                    className="min-w-0 flex-1 text-right"
+                    onClick={handleClear}
+                    title="تغيير المنتج"
+                >
+                    <div className="truncate font-medium leading-5">{selectedInventory.product.name}</div>
+                    <div className="truncate text-xs leading-4 text-muted-foreground">
+                        {selectedInventory.product.code || '-'} - متاح: {selectedInventory.quantity}
+                    </div>
+                </button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                    title="إزالة الاختيار"
+                    onPointerDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        handleClear();
+                    }}
+                    onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }}
+                >
+                    <X size={14} />
+                </Button>
+            </div>
+        );
+    }
+
+    const dropdown = isOpen && search.trim().length >= 2 && !disabled ? (
+        <div
+            className="pointer-events-auto z-[100] overflow-auto rounded-md border bg-popover text-popover-foreground shadow-lg"
+            style={dropdownStyle}
+            dir="rtl"
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+        >
+            {filteredProducts.length > 0 ? (
+                <div className="p-1">
+                    {filteredProducts.map((item) => (
+                        <button
+                            key={item.product_id}
+                            type="button"
+                            className="w-full rounded-sm px-3 py-2 text-right text-sm transition-colors hover:bg-accent"
+                            onMouseDown={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                            }}
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={() => {
+                                onSelect(item.product_id);
+                                setSearch('');
+                                setIsOpen(false);
+                            }}
+                        >
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                    <div className="truncate font-medium">{item.product?.name}</div>
+                                    <div className="text-xs text-muted-foreground">{item.product?.code || '-'}</div>
+                                </div>
+                                <Badge variant="outline" className="shrink-0">
+                                    متاح: {item.quantity}
+                                </Badge>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            ) : (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                    لا توجد منتجات متاحة مطابقة للبحث
+                </div>
+            )}
+        </div>
+    ) : null;
+
+    return (
+        <div ref={triggerRef} className="relative w-full min-w-0">
+            <Search className="absolute right-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground" size={16} />
+            <Input
+                value={search}
+                onChange={(event) => {
+                    setSearch(event.target.value);
+                    setIsOpen(true);
+                }}
+                onFocus={() => setIsOpen(true)}
+                disabled={disabled}
+                placeholder={disabled ? 'اختر المخازن أولا' : 'ابحث باسم المنتج أو الكود...'}
+                className="w-full min-w-0 pr-9"
+            />
+            {dropdown ? createPortal(dropdown, document.body) : null}
+
+            {isOpen && search.trim().length > 0 && search.trim().length < 2 && !disabled && (
+                <div className="mt-1 text-xs text-muted-foreground">اكتب حرفين على الأقل للبحث</div>
+            )}
+        </div>
+    );
 }
 
 export function WarehouseTransfersPage() {
@@ -508,30 +683,23 @@ export function WarehouseTransfersPage() {
                                     <CardTitle className="text-sm">إضافة صنف للتحويل</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div className="col-span-2">
-                                            <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="اختر المنتج" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {availableProducts?.map((item) => (
-                                                        <SelectItem key={item.product_id} value={item.product_id}>
-                                                            <span>{item.product?.name}</span>
-                                                            <span className="text-muted-foreground mr-2">
-                                                                (متاح: {item.quantity})
-                                                            </span>
-                                                        </SelectItem>
-                                                    ))}
-                                                    {availableProducts?.length === 0 && (
-                                                        <div className="p-2 text-sm text-muted-foreground text-center">
-                                                            لا توجد منتجات متاحة
-                                                        </div>
-                                                    )}
-                                                </SelectContent>
-                                            </Select>
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:items-end">
+                                        <div className="space-y-1.5 sm:col-span-2">
+                                            <Label className="text-xs text-muted-foreground">المنتج</Label>
+                                            <TransferProductPicker
+                                                products={availableProducts || []}
+                                                selectedProductId={selectedProductId}
+                                                onSelect={setSelectedProductId}
+                                                disabled={!fromWarehouseId || !toWarehouseId || (availableProducts?.length || 0) === 0}
+                                            />
+                                            {availableProducts?.length === 0 && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    لا توجد منتجات متاحة في المخزن المصدر
+                                                </p>
+                                            )}
                                         </div>
-                                        <div className="flex gap-2">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs text-muted-foreground">الكمية</Label>
                                             <Input
                                                 type="number"
                                                 min="0.001"
@@ -540,7 +708,7 @@ export function WarehouseTransfersPage() {
                                                 value={itemQuantity}
                                                 onChange={(e) => setItemQuantity(e.target.value)}
                                                 placeholder="الكمية"
-                                                className="w-24"
+                                                className="w-full min-w-0"
                                             />
                                         </div>
                                     </div>
