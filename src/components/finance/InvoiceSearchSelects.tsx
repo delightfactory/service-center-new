@@ -45,6 +45,7 @@ interface SearchBoxProps<T> {
     onClear?: () => void;
     disabled?: boolean;
     className?: string;
+    compactSelected?: boolean;
 }
 
 function SearchBox<T>({
@@ -60,6 +61,7 @@ function SearchBox<T>({
     onClear,
     disabled = false,
     className,
+    compactSelected = false,
 }: SearchBoxProps<T>) {
     const [search, setSearch] = React.useState('');
     const [isOpen, setIsOpen] = React.useState(false);
@@ -75,6 +77,12 @@ function SearchBox<T>({
 
     const handleSelect = (item: T) => {
         onSelect(item);
+        setSearch('');
+        setIsOpen(false);
+    };
+
+    const handleClear = () => {
+        onClear?.();
         setSearch('');
         setIsOpen(false);
     };
@@ -149,15 +157,56 @@ function SearchBox<T>({
 
     if (selectedLabel) {
         return (
-            <div className={cn('flex min-h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border bg-background px-3 py-2 text-sm', disabled && 'opacity-60', className)}>
-                <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium">{selectedLabel}</div>
+            <div
+                className={cn(
+                    'flex w-full min-w-0 items-center justify-between gap-2 rounded-md border bg-background text-sm',
+                    compactSelected ? 'min-h-10 px-2.5 py-1.5' : 'min-h-10 px-3 py-2',
+                    disabled && 'opacity-60',
+                    className
+                )}
+            >
+                {compactSelected ? (
+                <button
+                    type="button"
+                    className="min-w-0 flex-1 text-right"
+                    onClick={handleClear}
+                    disabled={!onClear || disabled}
+                    title="تغيير الاختيار"
+                >
+                    <div className="truncate font-medium leading-5">{selectedLabel}</div>
                     {selectedMeta && (
-                        <div className="truncate text-xs text-muted-foreground">{selectedMeta}</div>
+                        <div className="truncate text-xs leading-4 text-muted-foreground">{selectedMeta}</div>
+                    )}
+                </button>
+                ) : (
+                <div className="min-w-0 flex-1 text-right">
+                    <div className="truncate font-medium leading-5">{selectedLabel}</div>
+                    {selectedMeta && (
+                        <div className="truncate text-xs leading-4 text-muted-foreground">{selectedMeta}</div>
                     )}
                 </div>
+                )}
                 {onClear && !disabled && (
-                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClear}>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                        title="إزالة الاختيار"
+                        onPointerDown={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            handleClear();
+                        }}
+                        onMouseDown={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }}
+                        onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }}
+                    >
                         <X size={14} />
                     </Button>
                 )}
@@ -330,6 +379,7 @@ export function ProductSearchSelect({ selectedLabel, selectedCode, onSelect, exc
             onClear={() => onSelect(null)}
             disabled={disabled}
             className="min-w-0 sm:min-w-[280px]"
+            compactSelected
         />
     );
 }

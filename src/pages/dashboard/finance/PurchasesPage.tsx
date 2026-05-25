@@ -586,6 +586,11 @@ export function PurchasesPage() {
                                                 setItemPrice(product?.purchase_price?.toString() || '');
                                             }}
                                         />
+                                        {selectedProduct && (
+                                            <p className="text-[11px] text-muted-foreground">
+                                                اضغط على الصنف لتغييره أو على علامة الإزالة لمسحه
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="space-y-1.5">
                                         <Label className="text-xs text-muted-foreground">الكمية</Label>
