@@ -574,8 +574,9 @@ export function PurchasesPage() {
                                 <CardTitle className="text-sm">إضافة صنف</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
-                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-                                    <div className="sm:col-span-2">
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-4 sm:items-end">
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <Label className="text-xs text-muted-foreground">الصنف</Label>
                                         <ProductSearchSelect
                                             selectedLabel={selectedProduct?.name}
                                             selectedCode={selectedProduct?.code}
@@ -586,24 +587,30 @@ export function PurchasesPage() {
                                             }}
                                         />
                                     </div>
-                                    <Input
-                                        type="number"
-                                        min="0.001"
-                                        step="0.001"
-                                        value={itemQuantity}
-                                        onChange={(e) => setItemQuantity(e.target.value)}
-                                        placeholder="الكمية"
-                                        className="min-w-0"
-                                    />
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={itemPrice}
-                                        onChange={(e) => setItemPrice(e.target.value)}
-                                        placeholder="السعر"
-                                        className="min-w-0"
-                                    />
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs text-muted-foreground">الكمية</Label>
+                                        <Input
+                                            type="number"
+                                            min="0.001"
+                                            step="0.001"
+                                            value={itemQuantity}
+                                            onChange={(e) => setItemQuantity(e.target.value)}
+                                            placeholder="الكمية"
+                                            className="min-w-0"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs text-muted-foreground">السعر</Label>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={itemPrice}
+                                            onChange={(e) => setItemPrice(e.target.value)}
+                                            placeholder="السعر"
+                                            className="min-w-0"
+                                        />
+                                    </div>
                                 </div>
                                 <Button
                                     type="button"

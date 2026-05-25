@@ -112,9 +112,11 @@ function SearchBox<T>({
 
     const dropdown = isOpen && search.trim().length >= 2 && !disabled ? (
         <div
-            className="z-[100] overflow-auto rounded-md border bg-popover text-popover-foreground shadow-lg"
+            className="pointer-events-auto z-[100] overflow-auto rounded-md border bg-popover text-popover-foreground shadow-lg"
             style={dropdownStyle}
             dir="rtl"
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
         >
             {isLoading ? (
                 <div className="space-y-2 p-2">
@@ -128,7 +130,11 @@ function SearchBox<T>({
                             key={getKey(item)}
                             type="button"
                             className="w-full rounded-sm px-3 py-2 text-right text-sm transition-colors hover:bg-accent"
-                            onMouseDown={(event) => event.preventDefault()}
+                            onMouseDown={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                            }}
+                            onPointerDown={(event) => event.stopPropagation()}
                             onClick={() => handleSelect(item)}
                         >
                             {renderItem(item)}
